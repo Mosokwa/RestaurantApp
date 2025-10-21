@@ -14,6 +14,7 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import timedelta
+import dj_database_url
 import sys
 from celery.schedules import crontab
 
@@ -32,10 +33,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-it$posxpe=c%_5qczur-hllbtuts8$=e-f$syc^c!ump*7$)*g'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-please-change-me')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 TESTING = 'test' in sys.argv
 
@@ -144,10 +145,10 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default='sqlite:///db.sqlite3',
+        conn_max_age=600
+    )
 }
 
 
@@ -383,6 +384,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://your-customer-app.netlify.app",
+    "https://your-owner-app.netlify.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
