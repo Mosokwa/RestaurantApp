@@ -1,0 +1,219 @@
+.owner-header {
+  backdrop-filter: var(--glass-blur);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  margin: 1.5rem 1.5rem 0 1.5rem;
+  padding: 1rem;
+  box-shadow: var(--glass-shadow);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.left-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sidebar-toggle {
+  padding: 0.5rem;
+  border-radius: 0.75rem;
+  transition: var(--transition-smooth);
+  border: none;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  backdrop-filter: var(--glass-blur);
+}
+
+.sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.restaurant-switcher {
+  position: relative;
+}
+
+.restaurant-select {
+  backdrop-filter: var(--glass-blur);
+  background: var(--glass-bg);
+  padding: 0.5rem 2rem 0.5rem 1rem;
+  border-radius: var(--glass-radius);
+  border: 1px solid var(--glass-border);
+  color: white;
+  cursor: pointer;
+  outline: none;
+  transition: var(--transition-smooth);
+  font-family: var(--font-body);
+}
+
+.restaurant-select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.select-icon {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.right-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.search-container {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.search-input {
+  backdrop-filter: var(--glass-blur);
+  background: var(--glass-bg);
+  padding: 0.5rem 1rem 0.5rem 2.5rem;
+  width: 16rem;
+  border-radius: var(--glass-radius);
+  border: 1px solid var(--glass-border);
+  color: white;
+  outline: none;
+  transition: var(--transition-smooth);
+  font-family: var(--font-body);
+}
+
+.search-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.user-menu {
+  position: relative;
+}
+
+.user-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 0.75rem;
+  transition: var(--transition-smooth);
+  border: none;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  backdrop-filter: var(--glass-blur);
+}
+
+.user-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.02);
+}
+
+.user-avatar {
+  width: 2rem;
+  height: 2rem;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-secondary));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-family: var(--font-heading);
+}
+
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: 3rem;
+  width: 12rem;
+  backdrop-filter: var(--glass-blur);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  padding: 0.5rem;
+  z-index: 50;
+  box-shadow: var(--glass-shadow-hover);
+}
+
+.dropdown-item {
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  border: none;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  font-size: 0.875rem;
+  font-family: var(--font-body);
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-divider {
+  margin: 0.5rem 0;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.logout-item {
+  color: var(--color-accent);
+}
+
+.logout-item:hover {
+  background: rgba(231, 76, 60, 0.2);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .owner-header {
+    margin: 1rem 1rem 0 1rem;
+    padding: 0.75rem;
+  }
+  
+  .search-input {
+    width: 12rem;
+  }
+  
+  .user-name {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .owner-header {
+    margin: 0.5rem 0.5rem 0 0.5rem;
+    border-radius: 12px;
+  }
+  
+  .search-container {
+    display: none;
+  }
+  
+  .right-section {
+    gap: 0.5rem;
+  }
+}

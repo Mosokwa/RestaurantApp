@@ -1,0 +1,100 @@
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+.owner-layout {
+  min-height: 100vh;
+  background: var(--gradient-primary);
+  color: white;
+  font-family: var(--font-body);
+  position: relative;
+}
+
+/* Ensure gradient covers entire page */
+.owner-layout::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--gradient-primary);
+  z-index: -2;
+}
+
+.main-content {
+  transition: var(--transition-smooth);
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar-open {
+  margin-left: 16rem;
+}
+
+.sidebar-closed {
+  margin-left: 5rem;
+}
+
+.content-area {
+  padding: 1.5rem;
+  min-height: calc(100vh - 120px);
+  position: relative;
+}
+
+/* Mobile Overlay */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 999;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 1024px) {
+  .sidebar-open {
+    margin-left: 14rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar-open,
+  .sidebar-closed {
+    margin-left: 0;
+  }
+  
+  .content-area {
+    padding: 1rem;
+    margin-bottom: 4rem;
+  }
+  
+  /* Prevent body scroll when sidebar is open */
+  body.sidebar-open-mobile {
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-area {
+    padding: 0.75rem;
+  }
+}

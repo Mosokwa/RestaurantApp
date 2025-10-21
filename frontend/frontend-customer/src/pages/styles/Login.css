@@ -1,0 +1,421 @@
+/* Login.css - Updated */
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(#131212 30%, #372F2F, #5C5454);
+}
+
+.auth-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: rgba(255, 255, 255, 0.9) !important;
+  padding: 2.5rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 450px;
+  margin: 20px;
+}
+
+.auth-card h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #ffffff;
+  font-size: 1.8rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.auth-subtitle {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1.5rem;
+  font-size: 14px;
+}
+
+.form-row {
+  display: flex !important;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.5rem !important;
+}
+
+/* .form-row .form-group{
+  display: flex;
+} */
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* Target inputs specifically in form-group wrappers */
+.form-group input,
+.form-group select {
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 2px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 10px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  color: #ffffff !important; /* Force white text */
+}
+
+.form-group input::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: rgba(227, 63, 70, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(227, 63, 70, 0.2);
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.form-group input.error,
+.form-group select.error {
+  border-color: rgba(220, 53, 69, 0.8);
+}
+
+.auth-form input,
+.auth-form select,
+.auth-form button {
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  color: white !important;
+}
+
+
+.auth-form input::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.auth-form input:focus,
+.auth-form select:focus {
+  outline: none;
+  border-color: rgba(227, 63, 70, 0.6);
+  box-shadow: 0 0 0 3px rgba(227, 63, 70, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.auth-form input.error,
+.auth-form select.error {
+  border-color: rgba(220, 53, 69, 0.8);
+}
+
+.auth-form button {
+  background: linear-gradient(135deg, rgba(227, 63, 70, 0.9) 0%, rgba(195, 55, 60, 0.9) 100%) !important;
+  color: white !important;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 1rem;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 20px rgba(227, 63, 70, 0.4);
+}
+
+.auth-form button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(22, 223, 70, 0.3);
+  background: linear-gradient(135deg, rgba(227, 63, 70, 1) 0%, rgba(195, 55, 60, 1) 100%);
+}
+
+.auth-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.auth-form input:-webkit-autofill {
+  -webkit-text-fill-color: white !important;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.08) inset !important;
+}
+
+.field-error {
+  color: #ff6b6b;
+  font-size: 14px;
+  margin-top: 0.2rem;
+}
+
+.auth-links {
+  text-align: center;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.auth-links a {
+  color: rgba(227, 63, 70, 0.9);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.auth-links a:hover {
+  color: rgba(227, 63, 70, 1);
+  text-decoration: underline;
+}
+
+.auth-links span {
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0.5rem;
+}
+
+.social-login {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.social-login p {
+  margin-bottom: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  position: relative;
+}
+
+.social-login p::before,
+.social-login p::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 40%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.social-login p::before {
+  left: 0;
+}
+
+.social-login p::after {
+  right: 0;
+}
+
+.social-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.social-btn {
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  flex: 1;
+  backdrop-filter: blur(10px);
+}
+
+.social-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.social-btn.google:hover:not(:disabled) {
+  background: rgba(219, 68, 55, 0.8);
+  border-color: rgba(219, 68, 55, 0.5);
+}
+
+.social-btn.facebook:hover:not(:disabled) {
+  background: rgba(66, 103, 178, 0.8);
+  border-color: rgba(66, 103, 178, 0.5);
+}
+
+.social-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background: rgba(220, 53, 69, 0.9);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 14px;
+  border: 1px solid rgba(220, 53, 69, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+.success-message {
+  background: rgba(40, 167, 69, 0.9);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 14px;
+  border: 1px solid rgba(40, 167, 69, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+.two-factor-section {
+  text-align: center;
+}
+
+.two-factor-section p {
+  margin-bottom: 1.5rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.verification-info {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.verification-info p {
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.email-display {
+  font-weight: 600;
+  color: #ffffff !important;
+  font-size: 1.1rem;
+  margin: 1rem 0 !important;
+}
+
+.verification-actions {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.verification-actions p {
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.resend-button {
+  background: none;
+  border: none;
+  color: rgba(227, 63, 70, 0.9);
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: underline;
+  font-size: 14px;
+  transition: color 0.3s ease;
+}
+
+.resend-button:hover:not(:disabled) {
+  color: rgba(227, 63, 70, 1);
+}
+
+.resend-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ......... */
+.verification-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.code-inputs {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.code-input {
+  width: 50px;
+  height: 60px;
+  text-align: center;
+  font-size: 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.3s ease;
+  color: white;
+}
+
+.code-input:focus {
+  border-color: rgba(227, 63, 70, 0.6);
+  box-shadow: 0 0 0 3px rgba(227, 63, 70, 0.2);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.code-input:disabled {
+  background-color: rgba(255, 255, 255, 0.05);
+  cursor: not-allowed;
+}
+
+.verify-button {
+  padding: 12px 30px;
+  background: linear-gradient(135deg, rgba(227, 63, 70, 0.9) 0%, rgba(195, 55, 60, 0.9) 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(227, 63, 70, 0.3);
+}
+
+.verify-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(227, 63, 70, 0.4);
+}
+
+.verify-button:disabled {
+  background: rgba(108, 117, 125, 0.5);
+  cursor: not-allowed;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 1.5rem;
+    margin: 10px;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  
+  .social-buttons {
+    flex-direction: column;
+  }
+  
+  .auth-form input,
+  .auth-form select,
+  .auth-form button {
+    padding: 12px 14px;
+  }
+  
+  .code-input {
+    width: 40px;
+    height: 50px;
+    font-size: 20px;
+  }
+}

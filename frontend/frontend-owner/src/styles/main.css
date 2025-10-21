@@ -1,0 +1,324 @@
+/* Enhanced Glassmorphism Variables */
+:root {
+  /* Enhanced Color Palette */
+  --color-primary: #131212;
+  --color-secondary: #372F2F;
+  --color-tertiary: #5C5454;
+  --color-accent: #E74C3C;
+  --color-accent-secondary: #F39C12;
+  --color-success: #27AE60;
+  --color-warning: #F1C40F;
+  --color-info: #3498DB;
+  
+  /* Enhanced Gradients */
+  --gradient-primary: linear-gradient(#131212 30%, #372F2F, #5C5454);
+  --gradient-appetizer: linear-gradient(135deg, rgba(231, 76, 60, 0.15), rgba(231, 76, 60, 0.08));
+  --gradient-main-course: linear-gradient(135deg, rgba(243, 156, 18, 0.15), rgba(243, 156, 18, 0.08));
+  --gradient-dessert: linear-gradient(135deg, rgba(155, 89, 182, 0.15), rgba(155, 89, 182, 0.08));
+  
+  /* iOS-Style Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.15);
+  --glass-border: rgba(255, 255, 255, 0.125);
+  --glass-blur: blur(20px) saturate(180%);
+  --glass-radius: 16px;
+  --glass-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  --glass-shadow-hover: 
+    0 12px 40px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  
+  /* Typography */
+  --font-heading: 'Playfair Display', Georgia, serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-monospace: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  
+  /* Animation */
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Enhanced Base Glass Card */
+.glass-card {
+  backdrop-filter: var(--glass-blur);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow);
+  transition: var(--transition-smooth);
+}
+
+.glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--glass-shadow-hover);
+}
+
+/* Enhanced Glass Border Effect */
+.glass-border {
+  position: relative;
+  border-radius: var(--glass-radius);
+}
+
+.glass-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--glass-radius);
+  padding: 1px;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.3), 
+    rgba(255, 255, 255, 0.1));
+  mask: linear-gradient(#fff 0 0) content-box, 
+        linear-gradient(#fff 0 0);
+  mask-composite: xor;
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+}
+
+/* Restaurant Category Cards */
+.card-appetizer {
+  background: var(--gradient-appetizer);
+  border-left: 3px solid var(--color-accent);
+}
+
+.card-main-course {
+  background: var(--gradient-main-course);
+  border-left: 3px solid var(--color-accent-secondary);
+}
+
+.card-dessert {
+  background: var(--gradient-dessert);
+  border-left: 3px solid #9B59B6;
+}
+
+/* Enhanced Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 0.5em;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  background: linear-gradient(135deg, #fff, rgba(255,255,255,0.8));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.price {
+  font-family: var(--font-monospace);
+  font-weight: 600;
+  color: var(--color-accent-secondary);
+}
+
+/* Enhanced Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 12px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  min-height: 44px;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-accent), #C0392B);
+  color: white;
+}
+
+.btn-secondary {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  color: white;
+  border: 1px solid var(--glass-border);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Enhanced Status Badges */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  backdrop-filter: var(--glass-blur);
+}
+
+.badge-success {
+  background: rgba(39, 174, 96, 0.2);
+  color: #2ECC71;
+  border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+.badge-warning {
+  background: rgba(241, 196, 15, 0.2);
+  color: #F1C40F;
+  border: 1px solid rgba(241, 196, 15, 0.3);
+}
+
+.badge-danger {
+  background: rgba(231, 76, 60, 0.2);
+  color: #E74C3C;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+/* Enhanced Loading Animations */
+@keyframes chef-prep {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(10deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.loading-chef {
+  animation: chef-prep 2s ease-in-out infinite;
+}
+
+.loading-pulse {
+  animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Enhanced Menu Item Hover Effects */
+.menu-item {
+  transition: var(--transition-smooth);
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  transform: scale(1.02);
+}
+
+/* Enhanced Bottom Navigation for Mobile */
+.bottom-nav {
+  backdrop-filter: var(--glass-blur);
+  background: var(--glass-bg);
+  border-top: 1px solid var(--glass-border);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.5rem;
+  z-index: 1000;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 12px;
+  transition: var(--transition-smooth);
+  min-height: 44px;
+  justify-content: center;
+}
+
+.nav-item.active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Enhanced Responsive Design */
+@media (max-width: 768px) {
+  .glass-card {
+    backdrop-filter: blur(10px) saturate(160%);
+    margin: 0.5rem;
+  }
+  
+  .bottom-nav {
+    backdrop-filter: blur(10px) saturate(160%);
+  }
+  
+  h1 {
+    font-size: 1.75rem;
+  }
+  
+  /* Mobile-optimized glass effects */
+  .mobile-glass {
+    backdrop-filter: blur(15px) saturate(180%);
+    background: rgba(255, 255, 255, 0.12);
+  }
+}
+
+@media (max-width: 480px) {
+  .glass-card {
+    border-radius: 12px;
+    backdrop-filter: blur(8px) saturate(140%);
+  }
+  
+  /* Stack layout for very small screens */
+  .stack-mobile {
+    flex-direction: column;
+  }
+}
+
+/* Enhanced Focus States for Accessibility */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--color-info);
+  outline-offset: 2px;
+}
+
+/* Enhanced Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

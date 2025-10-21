@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @page {
+        size: A4;
+        margin: 2cm;
+        @bottom-center {
+          content: "Page " counter(page) " of " counter(pages);
+          font-size: 10px;
+          color: #666;
+        }
+      }
+
+      body {
+        font-family: "Helvetica", "Arial", sans-serif;
+        margin: 0;
+        padding: 0;
+        font-size: 12px;
+        line-height: 1.4;
+        color: #333;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #2c3e50;
+        padding-bottom: 15px;
+      }
+
+      .header h1 {
+        color: #2c3e50;
+        margin: 0 0 10px 0;
+        font-size: 24px;
+      }
+
+      .header .subtitle {
+        color: #7f8c8d;
+        font-size: 14px;
+        margin: 0;
+      }
+
+      .restaurant-info {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        border-left: 4px solid #3498db;
+      }
+
+      .section {
+        margin-bottom: 25px;
+        page-break-inside: avoid;
+      }
+
+      .section h2 {
+        color: #2c3e50;
+        border-bottom: 1px solid #bdc3c7;
+        padding-bottom: 8px;
+        margin: 0 0 15px 0;
+        font-size: 18px;
+      }
+
+      .section h3 {
+        color: #34495e;
+        margin: 0 0 10px 0;
+        font-size: 14px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 15px;
+        font-size: 11px;
+      }
+
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 10px 8px;
+        text-align: left;
+      }
+
+      th {
+        background-color: #34495e;
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      tr:nth-child(even) {
+        background-color: #f8f9fa;
+      }
+
+      .metric-value {
+        font-weight: bold;
+        font-size: 13px;
+      }
+
+      .positive {
+        color: #27ae60;
+        font-weight: bold;
+      }
+
+      .negative {
+        color: #e74c3c;
+        font-weight: bold;
+      }
+
+      .neutral {
+        color: #f39c12;
+        font-weight: bold;
+      }
+
+      .financial-health {
+        padding: 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+        text-align: center;
+        font-weight: bold;
+        font-size: 14px;
+      }
+
+      .health-excellent {
+        background: #d5f4e6;
+        color: #27ae60;
+        border: 1px solid #27ae60;
+      }
+
+      .health-good {
+        background: #d6eaf8;
+        color: #3498db;
+        border: 1px solid #3498db;
+      }
+
+      .health-fair {
+        background: #fef9e7;
+        color: #f39c12;
+        border: 1px solid #f39c12;
+      }
+
+      .health-poor {
+        background: #fdedec;
+        color: #e74c3c;
+        border: 1px solid #e74c3c;
+      }
+
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .kpi-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 15px;
+        text-align: center;
+      }
+
+      .kpi-value {
+        font-size: 20px;
+        font-weight: bold;
+        margin: 5px 0;
+        color: #2c3e50;
+      }
+
+      .kpi-label {
+        font-size: 11px;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .recommendations {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 20px 0;
+      }
+
+      .recommendations h3 {
+        color: #856404;
+        margin-top: 0;
+      }
+
+      .footer {
+        margin-top: 30px;
+        padding-top: 15px;
+        border-top: 1px solid #bdc3c7;
+        text-align: center;
+        font-size: 10px;
+        color: #7f8c8d;
+      }
+
+      .page-break {
+        page-break-before: always;
+      }
+
+      .chart-placeholder {
+        background: #f8f9fa;
+        border: 1px dashed #bdc3c7;
+        border-radius: 5px;
+        padding: 30px;
+        text-align: center;
+        color: #7f8c8d;
+        margin: 15px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Restaurant Analytics Report</h1>
+      <p class="subtitle">Financial Performance Analysis</p>
+      <p>Generated on: {% now "F j, Y" %}</p>
+    </div>
+
+    {% for item in data %}
+    <div class="restaurant-info">
+      <h2>{{ item.restaurant_name }}</h2>
+      <p><strong>Report Period:</strong> {{ item.report_period }}</p>
+      <p><strong>Report Type:</strong> {{ item.period_type|title }} Analysis</p>
+    </div>
+
+    <!-- Financial Health Summary -->
+    <div class="section">
+      <h2>Financial Health Summary</h2>
+
+      <div class="financial-health health-{{ item.financial_health.status }}">
+        Financial Health: {{ item.financial_health.status|upper }} (Score: {{
+        item.financial_health.score }}/100)
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Revenue</div>
+          <div class="kpi-value">
+            ${{ item.revenue_analysis.total_revenue|floatformat:2 }}
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Net Profit</div>
+          <div class="kpi-value">
+            ${{ item.profitability_analysis.net_profit|floatformat:2 }}
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Net Margin</div>
+          <div class="kpi-value">
+            {{ item.profitability_analysis.net_margin|floatformat:2 }}%
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Revenue Growth</div>
+          <div
+            class="kpi-value {% if item.revenue_growth >= 0 %}positive{% else %}negative{% endif %}"
+          >
+            {{ item.revenue_growth|floatformat:2 }}%
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Revenue Analysis -->
+    <div class="section">
+      <h2>Revenue Analysis</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Revenue Stream</th>
+            <th>Amount</th>
+            <th>Percentage</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Total Revenue</td>
+            <td class="metric-value">
+              ${{ item.revenue_analysis.total_revenue|floatformat:2 }}
+            </td>
+            <td>100%</td>
+          </tr>
+          <tr>
+            <td>Food Revenue</td>
+            <td>${{ item.food_revenue|floatformat:2 }}</td>
+            <td>{{ item.food_revenue_percentage|floatformat:1 }}%</td>
+          </tr>
+          <tr>
+            <td>Beverage Revenue</td>
+            <td>${{ item.beverage_revenue|floatformat:2 }}</td>
+            <td>{{ item.beverage_revenue_percentage|floatformat:1 }}%</td>
+          </tr>
+          <tr>
+            <td>Average Daily Revenue</td>
+            <td class="metric-value">
+              ${{ item.revenue_analysis.average_daily_revenue|floatformat:2 }}
+            </td>
+            <td>-</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="chart-placeholder">
+        📊 Revenue Trend Chart<br />
+        <small>Visual representation of daily revenue trends</small>
+      </div>
+    </div>
+
+    <!-- Cost Analysis -->
+    <div class="section">
+      <h2>Cost Analysis</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Expense Category</th>
+            <th>Amount</th>
+            <th>Percentage of Revenue</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Cost of Goods Sold (COGS)</td>
+            <td>${{ item.cost_of_goods_sold|floatformat:2 }}</td>
+            <td>{{ item.cogs_percentage|floatformat:1 }}%</td>
+          </tr>
+          <tr>
+            <td>Labor Costs</td>
+            <td>${{ item.labor_costs|floatformat:2 }}</td>
+            <td>{{ item.labor_percentage|floatformat:1 }}%</td>
+          </tr>
+          <tr>
+            <td>Operating Expenses</td>
+            <td>${{ item.operating_expenses|floatformat:2 }}</td>
+            <td>{{ item.operating_percentage|floatformat:1 }}%</td>
+          </tr>
+          <tr>
+            <td>Delivery Costs</td>
+            <td>${{ item.delivery_costs|floatformat:2 }}</td>
+            <td>{{ item.delivery_percentage|floatformat:1 }}%</td>
+          </tr>
+          <tr>
+            <td><strong>Total Costs</strong></td>
+            <td class="metric-value">${{ item.total_costs|floatformat:2 }}</td>
+            <td>
+              <strong>{{ item.total_costs_percentage|floatformat:1 }}%</strong>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Profitability Analysis -->
+    <div class="section">
+      <h2>Profitability Analysis</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Profit Metric</th>
+            <th>Amount</th>
+            <th>Margin</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Gross Profit</td>
+            <td>
+              ${{ item.profitability_analysis.gross_profit|floatformat:2 }}
+            </td>
+            <td>
+              {{ item.profitability_analysis.gross_margin|floatformat:2 }}%
+            </td>
+            <td
+              class="{% if item.profitability_analysis.gross_margin >= 60 %}positive{% elif item.profitability_analysis.gross_margin >= 50 %}neutral{% else %}negative{% endif %}"
+            >
+              {% if item.profitability_analysis.gross_margin >= 60 %}Excellent
+              {% elif item.profitability_analysis.gross_margin >= 50 %}Good {%
+              else %}Needs Improvement{% endif %}
+            </td>
+          </tr>
+          <tr>
+            <td>Operating Profit</td>
+            <td>
+              ${{ item.profitability_analysis.operating_profit|floatformat:2 }}
+            </td>
+            <td>
+              {{ item.profitability_analysis.operating_margin|floatformat:2 }}%
+            </td>
+            <td
+              class="{% if item.profitability_analysis.operating_margin >= 15 %}positive{% elif item.profitability_analysis.operating_margin >= 10 %}neutral{% else %}negative{% endif %}"
+            >
+              {% if item.profitability_analysis.operating_margin >= 15
+              %}Excellent {% elif item.profitability_analysis.operating_margin
+              >= 10 %}Good {% else %}Needs Improvement{% endif %}
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Net Profit</strong></td>
+            <td class="metric-value">
+              ${{ item.profitability_analysis.net_profit|floatformat:2 }}
+            </td>
+            <td class="metric-value">
+              {{ item.profitability_analysis.net_margin|floatformat:2 }}%
+            </td>
+            <td
+              class="{% if item.profitability_analysis.net_margin >= 12 %}positive{% elif item.profitability_analysis.net_margin >= 8 %}neutral{% else %}negative{% endif %}"
+            >
+              {% if item.profitability_analysis.net_margin >= 12 %}Excellent {%
+              elif item.profitability_analysis.net_margin >= 8 %}Good {% else
+              %}Needs Improvement{% endif %}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Key Performance Indicators -->
+    <div class="section">
+      <h2>Key Performance Indicators</h2>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Return on Investment</div>
+          <div
+            class="kpi-value {% if item.return_on_investment >= 15 %}positive{% elif item.return_on_investment >= 10 %}neutral{% else %}negative{% endif %}"
+          >
+            {{ item.return_on_investment|floatformat:1 }}%
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Break-even Point</div>
+          <div class="kpi-value">
+            ${{ item.break_even_point|floatformat:2 }}
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Industry Benchmark</div>
+          <div
+            class="kpi-value {% if item.net_margin >= item.industry_benchmark %}positive{% else %}negative{% endif %}"
+          >
+            {{ item.industry_benchmark|floatformat:1 }}%
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Performance vs Benchmark</div>
+          <div
+            class="kpi-value {% if item.net_margin >= item.industry_benchmark %}positive{% else %}negative{% endif %}"
+          >
+            {% widthratio item.net_margin item.industry_benchmark 100 %}%
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="recommendations">
+      <h3>💡 Strategic Recommendations</h3>
+      <ul>
+        {% if item.profitability_analysis.net_margin < 10 %}
+        <li>
+          <strong>Cost Optimization:</strong> Review ingredient costs and
+          supplier contracts to improve gross margins
+        </li>
+        <li>
+          <strong>Menu Engineering:</strong> Focus on promoting high-margin
+          items and reconsider low-performing menu items
+        </li>
+        {% endif %} {% if item.revenue_growth < 5 %}
+        <li>
+          <strong>Revenue Growth:</strong> Implement targeted marketing
+          campaigns and consider expanding delivery areas
+        </li>
+        <li>
+          <strong>Customer Retention:</strong> Develop loyalty program to
+          increase repeat business
+        </li>
+        {% endif %} {% if item.labor_percentage > 30 %}
+        <li>
+          <strong>Staff Optimization:</strong> Review staffing schedules to
+          better align with peak hours
+        </li>
+        {% endif %}
+
+        <li>
+          <strong>Operational Efficiency:</strong> Monitor preparation times and
+          streamline kitchen processes
+        </li>
+        <li>
+          <strong>Technology Investment:</strong> Consider POS system upgrades
+          for better analytics and reporting
+        </li>
+      </ul>
+    </div>
+
+    <div class="footer">
+      <p>
+        This report was automatically generated by Restaurant Analytics System
+      </p>
+      <p>Confidential - For internal use only</p>
+    </div>
+
+    {% if not forloop.last %}
+    <div class="page-break"></div>
+    {% endif %} {% endfor %}
+  </body>
+</html>

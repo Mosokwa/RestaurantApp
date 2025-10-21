@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background: #9c27b0;
+        color: white;
+        padding: 20px;
+        text-align: center;
+        border-radius: 5px 5px 0 0;
+      }
+      .content {
+        background: #f9f9f9;
+        padding: 20px;
+        border: 1px solid #ddd;
+      }
+      .bonus-display {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        text-align: center;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+      .footer {
+        text-align: center;
+        padding: 20px;
+        font-size: 12px;
+        color: #666;
+        border-top: 1px solid #ddd;
+        margin-top: 20px;
+      }
+      .benefits {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: 20px 0;
+      }
+      .benefit {
+        background: white;
+        padding: 15px;
+        border-radius: 5px;
+        text-align: center;
+        border: 1px solid #e0e0e0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Welcome to {{ site_name }}! 🌟</h1>
+    </div>
+    <div class="content">
+      <p>Hi {{ customer_name }},</p>
+
+      <p>
+        Welcome to the <strong>{{ program_name }}</strong> loyalty program!
+        We're thrilled to have you.
+      </p>
+
+      <div class="bonus-display">
+        <h2>🎁 WELCOME BONUS</h2>
+        <p style="font-size: 32px; margin: 10px 0; font-weight: bold">
+          +{{ bonus_points }} POINTS
+        </p>
+        <p>Your account has been credited with welcome bonus points!</p>
+      </div>
+
+      <p>Here's what you can do with your points:</p>
+
+      <div class="benefits">
+        <div class="benefit">
+          <h3>💰 Save Money</h3>
+          <p>Redeem points for discounts</p>
+        </div>
+        <div class="benefit">
+          <h3>🎁 Free Items</h3>
+          <p>Get free menu items</p>
+        </div>
+        <div class="benefit">
+          <h3>⭐ Exclusive Rewards</h3>
+          <p>Special member-only offers</p>
+        </div>
+        <div class="benefit">
+          <h3>🚀 Faster Checkout</h3>
+          <p>Save your preferences</p>
+        </div>
+      </div>
+
+      <p><strong>Your Current Status:</strong></p>
+      <ul>
+        <li>Points Balance: <strong>{{ current_points }} points</strong></li>
+        <li>Current Tier: <strong>{{ current_tier }}</strong></li>
+        <li>
+          Next Tier: <strong>{{ next_tier }}</strong> at {{ next_tier_points }}
+          points
+        </li>
+      </ul>
+
+      <p>
+        Start earning more points by placing orders at participating
+        restaurants!
+      </p>
+
+      <p>Happy dining!<br />The {{ site_name }} Team</p>
+    </div>
+    <div class="footer">
+      <p>Questions? Contact our support team.</p>
+      <p>&copy; {{ current_year }} {{ site_name }}. All rights reserved.</p>
+    </div>
+  </body>
+</html>

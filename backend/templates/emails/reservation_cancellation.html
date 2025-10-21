@@ -1,0 +1,78 @@
+<!-- templates/emails/reservation_cancellation.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background: #e74c3c;
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+      .content {
+        padding: 20px;
+        background: #f9f9f9;
+      }
+      .reservation-details {
+        background: white;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+      }
+      .footer {
+        text-align: center;
+        padding: 20px;
+        font-size: 12px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Reservation Cancelled</h1>
+      </div>
+      <div class="content">
+        <p>
+          Dear {{ customer.user.get_full_name|default:customer.user.username }},
+        </p>
+        <p>Your reservation has been cancelled.</p>
+
+        <div class="reservation-details">
+          <h3>Cancelled Reservation Details</h3>
+          <p><strong>Restaurant:</strong> {{ restaurant.name }}</p>
+          <p><strong>Date:</strong> {{ reservation.reservation_date }}</p>
+          <p><strong>Time:</strong> {{ reservation.reservation_time }}</p>
+          <p>
+            <strong>Reservation Code:</strong> {{ reservation.reservation_code
+            }}
+          </p>
+          {% if reason %}
+          <p><strong>Cancellation Reason:</strong> {{ reason }}</p>
+          {% endif %}
+        </div>
+
+        <p>We're sorry to see you go and hope to serve you another time.</p>
+
+        <p>
+          If this cancellation was unexpected or you have any questions, please
+          contact us at {{ restaurant.phone_number }}.
+        </p>
+      </div>
+      <div class="footer">
+        <p>We hope to welcome you back soon!</p>
+        <p>{{ restaurant.name }} Team</p>
+      </div>
+    </div>
+  </body>
+</html>

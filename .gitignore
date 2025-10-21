@@ -1,0 +1,70 @@
+# =====================
+# Python Virtual Environment
+# =====================
+.env/
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# =====================
+# General/OS Files
+# =====================
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# =====================
+# IDE Files
+# =====================
+.vscode/
+.idea/
+*.code-workspace
+.history/
+
+# =====================
+# Temporary Files
+# =====================
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+*.bak
+*.backup
+
+# =====================
+# Log Files
+# =====================
+*.log
+logs/
+
+# =====================
+# Compression Files
+# =====================
+*.gz
+*.tar
+*.zip
+*.7z
+
+# =====================
+# OS Specific
+# =====================
+# macOS
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk

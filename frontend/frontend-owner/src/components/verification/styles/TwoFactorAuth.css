@@ -1,0 +1,36 @@
+.twofa-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(var(--deep-charcoal) 0%, var(--chocolate-brown) 50%, var(--taupe-gray) 100%);
+  padding: 2rem;
+}
+
+.twofa-card {
+  backdrop-filter: var(--glass-blur);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 3rem;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+
+.twofa-input {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.5rem;
+  text-align: center;
+  letter-spacing: 0.5rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+.remember-device {
+  margin: 1rem 0;
+  text-align: left;
+}

@@ -1,0 +1,605 @@
+/* ===== RESUME REGISTRATION STYLES ===== */
+/* Uses the same design system as OwnerLogin.css */
+
+.resume-registration-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: linear-gradient(var(--deep-charcoal) 0%, var(--chocolate-brown) 50%, var(--taupe-gray) 100%);
+  position: relative;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Reuse the same floating orbs animation */
+.resume-floating-orbs {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.resume-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.15;
+  animation: float 8s ease-in-out infinite;
+}
+
+.resume-orb-1 {
+  width: 200px;
+  height: 200px;
+  background: var(--tomato-red);
+  top: 10%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.resume-orb-2 {
+  width: 150px;
+  height: 150px;
+  background: var(--golden-yellow);
+  top: 60%;
+  right: 15%;
+  animation-delay: -2s;
+}
+
+.resume-orb-3 {
+  width: 180px;
+  height: 180px;
+  background: var(--fresh-green);
+  bottom: 20%;
+  left: 20%;
+  animation-delay: -4s;
+}
+
+.resume-orb-4 {
+  width: 120px;
+  height: 120px;
+  background: #3498db;
+  top: 30%;
+  right: 25%;
+  animation-delay: -6s;
+}
+
+/* Main content layout matching login */
+.resume-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  max-width: 1200px;
+  width: 100%;
+  align-items: center;
+  z-index: 10;
+}
+
+/* Brand section matching login */
+.resume-brand-section {
+  color: white;
+  padding-right: 2rem;
+}
+
+.resume-brand-logo {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 2rem;
+}
+
+.resume-logo-icon {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--tomato-red), var(--golden-yellow));
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+}
+
+.resume-logo-icon svg {
+  width: 40px;
+  height: 40px;
+  color: white;
+}
+
+.resume-logo-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  height: 120px;
+  background: linear-gradient(135deg, var(--tomato-red), var(--golden-yellow));
+  border-radius: 50%;
+  filter: blur(20px);
+  opacity: 0.3;
+  z-index: 1;
+}
+
+.resume-brand-title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  line-height: 1.1;
+  background: linear-gradient(135deg, #fff, rgba(255,255,255,0.8));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.resume-brand-accent {
+  background: linear-gradient(135deg, var(--tomato-red), var(--golden-yellow));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.resume-brand-subtitle {
+  font-size: 1.2rem;
+  opacity: 0.8;
+  margin-bottom: 2.5rem;
+  line-height: 1.6;
+}
+
+.resume-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.resume-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  opacity: 0.9;
+  transition: opacity 0.3s ease;
+}
+
+.resume-feature-item:hover {
+  opacity: 1;
+}
+
+.resume-feature-icon {
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, var(--tomato-red), var(--golden-yellow));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: white;
+}
+
+/* Form section matching login */
+.resume-form-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.resume-glass-card {
+  backdrop-filter: var(--glass-blur);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 3rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: var(--glass-shadow);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.resume-glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+}
+
+.resume-glass-card.card-hover {
+  transform: translateY(-5px);
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.15),
+    0 8px 32px rgba(231, 76, 60, 0.1);
+}
+
+/* Form Header */
+.resume-form-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.resume-form-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.resume-form-subtitle {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* Alerts - reuse same styles */
+.resume-alert-glass {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid;
+  animation: slideIn 0.3s ease-out;
+}
+
+.resume-alert-glass.error {
+  background: rgba(231, 76, 60, 0.1);
+  border-color: rgba(231, 76, 60, 0.3);
+}
+
+.resume-alert-glass.warning {
+  background: rgba(243, 156, 18, 0.1);
+  border-color: rgba(243, 156, 18, 0.3);
+}
+
+.resume-alert-glass.success {
+  background: rgba(39, 174, 96, 0.1);
+  border-color: rgba(39, 174, 96, 0.3);
+}
+
+.resume-alert-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.resume-alert-content {
+  flex: 1;
+}
+
+.resume-alert-title {
+  font-weight: 600;
+  color: white;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.resume-alert-message {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* Input Fields - reuse same styles */
+.resume-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.resume-input-group {
+  position: relative;
+}
+
+.resume-input-glass {
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.resume-input-glass.input-focused {
+  border-color: rgba(231, 76, 60, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
+.resume-glass-input {
+  width: 100%;
+  padding: 1rem 1rem 1rem 3rem;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.resume-glass-input::placeholder {
+  color: transparent;
+}
+
+.resume-glass-input:focus::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.resume-input-label {
+  position: absolute;
+  top: 1rem;
+  left: 3rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.95rem;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+.resume-glass-input:focus + .resume-input-label,
+.resume-glass-input:not(:placeholder-shown) + .resume-input-label {
+  top: 0.5rem;
+  left: 3rem;
+  font-size: 0.75rem;
+  color: var(--tomato-red);
+}
+
+.resume-input-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.6);
+  transition: color 0.3s ease;
+}
+
+.resume-input-glass.input-focused .resume-input-icon {
+  color: var(--tomato-red);
+}
+
+/* Button - reuse same styles */
+.resume-login-button {
+  width: 100%;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, var(--tomato-red), var(--golden-yellow));
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.resume-login-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.6s ease;
+}
+
+.resume-login-button:hover:not(.loading)::before {
+  left: 100%;
+}
+
+.resume-login-button:hover:not(.loading) {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 25px rgba(231, 76, 60, 0.4),
+    0 4px 6px rgba(231, 76, 60, 0.1);
+}
+
+.resume-login-button:active:not(.loading) {
+  transform: translateY(0);
+}
+
+.resume-login-button.loading {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.resume-button-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid transparent;
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.resume-login-button svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s ease;
+}
+
+.resume-login-button:hover:not(.loading) svg {
+  transform: translateX(3px);
+}
+
+/* Form Footer */
+.resume-form-footer {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.resume-footer-text {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.resume-footer-link {
+  color: var(--tomato-red);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.resume-footer-link:hover {
+  color: #ff6b6b;
+}
+
+/* Alternative Action Section */
+.resume-alternative-action {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.resume-alternative-text {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.resume-alternative-button {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.resume-alternative-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Security Badge */
+.resume-security-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+  backdrop-filter: blur(10px);
+}
+
+.resume-badge-icon {
+  font-size: 0.9rem;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 968px) {
+  .resume-content {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    text-align: center;
+  }
+  
+  .resume-brand-section {
+    padding-right: 0;
+  }
+  
+  .resume-brand-title {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .resume-registration-container {
+    padding: 1rem;
+  }
+  
+  .resume-glass-card {
+    padding: 2rem;
+  }
+  
+  .resume-brand-title {
+    font-size: 2rem;
+  }
+  
+  .resume-form-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .resume-orb,
+  .resume-glass-card,
+  .resume-login-button,
+  .resume-input-glass {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Error states matching login */
+.resume-input-error {
+  border-color: #ff4757 !important;
+  background: rgba(255, 71, 87, 0.05) !important;
+}
+
+.resume-input-error .resume-input-icon {
+  color: #ff4757 !important;
+}
+
+.resume-field-error {
+  color: #ff4757;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  padding-left: 0.5rem;
+}
+
+.resume-button-disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+.resume-button-disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Info Box Styles */
+.resume-info-box {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.resume-info-title {
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.resume-info-message {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}

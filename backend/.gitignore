@@ -1,0 +1,249 @@
+# =====================
+# Django Specific
+# =====================
+
+# Database
+db.sqlite3
+*.sqlite3
+*.db
+*.sqlite
+
+# Local development settings
+local_settings.py
+settings/local.py
+
+# Django secret key and environment variables
+.env
+.env.local
+.env.production
+.env.development
+.env.example
+.env.test
+
+# Media and static files (usually generated, not committed)
+media/
+staticfiles/
+!media/.gitkeep
+!staticfiles/.gitkeep
+
+# Django migrations (keep these tracked for production)
+# !your_app/migrations/
+# !your_app/migrations/__init__.py
+
+# =====================
+# Python
+# =====================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# celery beat schedule file
+celerybeat-schedule
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# =====================
+# macOS
+# =====================
+
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# =====================
+# VSCode
+# =====================
+
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/
+
+# =====================
+# Log Files (Your Specific Requests)
+# =====================
+
+auth.log
+security.log
+*.log
+logs/
+
+# Redis
+dump.rdb
+
+# =====================
+# Other Common Files
+# =====================
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Backup files
+*.bak
+*.backup
+
+# Compression files
+*.gz
+*.tar
+*.zip
+*.7z
+
+# IDE files (other than VSCode)
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# =====================
+# Project Specific
+# =====================
+
+# Your specific requested files
+auth.log
+security.log
+dump.rdb
+db.sqlite3
+
+# Coverage reports
+.coverage
+htmlcov/
+
+# Pytest
+.pytest_cache/
+
+# Celery
+celerybeat-schedule.db
+
+# Flower (Celery monitoring)
+flower
+
+# Docker
+docker-compose.override.yml
+
+# Heroku
+*.orig
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/

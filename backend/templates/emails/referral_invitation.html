@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background: #4caf50;
+        color: white;
+        padding: 20px;
+        text-align: center;
+        border-radius: 5px 5px 0 0;
+      }
+      .content {
+        background: #f9f9f9;
+        padding: 20px;
+        border: 1px solid #ddd;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 24px;
+        background: #4caf50;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        margin: 15px 0;
+      }
+      .footer {
+        text-align: center;
+        padding: 20px;
+        font-size: 12px;
+        color: #666;
+        border-top: 1px solid #ddd;
+        margin-top: 20px;
+      }
+      .points-badge {
+        background: #ffd700;
+        color: #333;
+        padding: 5px 10px;
+        border-radius: 12px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>You're Invited! 🎉</h1>
+    </div>
+    <div class="content">
+      <p>Hi there!</p>
+      <p>
+        Your friend <strong>{{ referrer_name }}</strong> has invited you to join
+        <strong>{{ site_name }}</strong>!
+      </p>
+
+      <p>
+        When you sign up using the link below and complete your first order,
+        you'll receive:
+      </p>
+      <p style="text-align: center">
+        <span class="points-badge">{{ bonus_points }} BONUS POINTS</span>
+      </p>
+
+      <div style="text-align: center; margin: 25px 0">
+        <a href="{{ referral_url }}" class="button"
+          >Join Now & Get Bonus Points</a
+        >
+      </div>
+
+      <p>With {{ site_name }}, you can:</p>
+      <ul>
+        <li>🎁 Earn points on every order</li>
+        <li>💰 Redeem points for discounts and free items</li>
+        <li>⭐ Get exclusive member-only offers</li>
+        <li>⚡ Enjoy faster checkout</li>
+      </ul>
+
+      <p><strong>Your referral code:</strong> {{ referral_code }}</p>
+
+      <p>We can't wait to welcome you to our community!</p>
+    </div>
+    <div class="footer">
+      <p>
+        This invitation was sent by {{ referrer_name }} and will expire in 30
+        days.
+      </p>
+      <p>If you didn't expect this email, please disregard it.</p>
+      <p>&copy; {{ current_year }} {{ site_name }}. All rights reserved.</p>
+    </div>
+  </body>
+</html>

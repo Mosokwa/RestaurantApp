@@ -1,0 +1,96 @@
+<!-- templates/emails/reservation_confirmation.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background: #2c5aa0;
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+      .content {
+        padding: 20px;
+        background: #f9f9f9;
+      }
+      .reservation-details {
+        background: white;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+      }
+      .footer {
+        text-align: center;
+        padding: 20px;
+        font-size: 12px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Reservation Confirmed!</h1>
+      </div>
+      <div class="content">
+        <p>
+          Dear {{ customer.user.get_full_name|default:customer.user.username }},
+        </p>
+        <p>
+          Your reservation has been confirmed. We look forward to serving you!
+        </p>
+
+        <div class="reservation-details">
+          <h3>Reservation Details</h3>
+          <p><strong>Restaurant:</strong> {{ restaurant.name }}</p>
+          <p><strong>Date:</strong> {{ reservation.reservation_date }}</p>
+          <p><strong>Time:</strong> {{ reservation.reservation_time }}</p>
+          <p>
+            <strong>Party Size:</strong> {{ reservation.party_size }} people
+          </p>
+          <p>
+            <strong>Reservation Code:</strong>
+            <strong>{{ reservation.reservation_code }}</strong>
+          </p>
+          {% if reservation.special_occasion != 'none' %}
+          <p>
+            <strong>Special Occasion:</strong> {{
+            reservation.get_special_occasion_display }}
+          </p>
+          {% endif %} {% if reservation.special_requests %}
+          <p>
+            <strong>Special Requests:</strong> {{ reservation.special_requests
+            }}
+          </p>
+          {% endif %}
+        </div>
+
+        <p>Please arrive 5-10 minutes before your reservation time.</p>
+
+        <p>
+          <strong>Cancellation Policy:</strong><br />
+          You can cancel your reservation up to {{
+          restaurant.cancellation_policy_hours }} hours before your reservation
+          time without any charges.
+        </p>
+      </div>
+      <div class="footer">
+        <p>Thank you for choosing {{ restaurant.name }}!</p>
+        <p>
+          If you have any questions, please contact us at {{ restaurant.email }}
+          or {{ restaurant.phone_number }}
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

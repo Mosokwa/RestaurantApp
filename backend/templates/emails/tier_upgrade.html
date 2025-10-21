@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background: linear-gradient(135deg, #ffd700 0%, #ffa000 100%);
+        color: #333;
+        padding: 20px;
+        text-align: center;
+        border-radius: 5px 5px 0 0;
+      }
+      .content {
+        background: #f9f9f9;
+        padding: 20px;
+        border: 1px solid #ddd;
+      }
+      .tier-badge {
+        font-size: 28px;
+        font-weight: bold;
+        text-align: center;
+        margin: 20px 0;
+        padding: 15px;
+        border-radius: 8px;
+        background: #fff3cd;
+        border: 2px solid #ffc107;
+      }
+      .benefits-list {
+        background: white;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+        border-left: 4px solid #4caf50;
+      }
+      .footer {
+        text-align: center;
+        padding: 20px;
+        font-size: 12px;
+        color: #666;
+        border-top: 1px solid #ddd;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Level Up! 🚀</h1>
+    </div>
+    <div class="content">
+      <p>Hi {{ customer_name }},</p>
+
+      <p>Congratulations! You've reached a new loyalty tier!</p>
+
+      <div class="tier-badge">🏆 {{ new_tier|upper }} MEMBER 🏆</div>
+
+      <p>
+        You've earned this promotion by accumulating
+        <strong>{{ current_points }} points</strong> across {{ restaurant_count
+        }} restaurants.
+      </p>
+
+      <div class="benefits-list">
+        <h3>Your New Benefits:</h3>
+        <ul>
+          {% for benefit, value in new_benefits.items %}
+          <li>
+            <strong>{{ benefit|title }}:</strong> {% if value is True %}✅{%
+            elif value is False %}❌{% else %}{{ value }}{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <p><strong>What's Next?</strong></p>
+      <ul>
+        <li>Next tier: <strong>{{ next_tier }}</strong></li>
+        <li>
+          Points needed: <strong>{{ points_to_next_tier }} points</strong>
+        </li>
+        <li>Keep ordering to unlock even better benefits!</li>
+      </ul>
+
+      <p>Thank you for your continued loyalty. We appreciate you!</p>
+
+      <p>Best regards,<br />The {{ site_name }} Team</p>
+    </div>
+    <div class="footer">
+      <p>Keep earning to reach the next level!</p>
+      <p>&copy; {{ current_year }} {{ site_name }}. All rights reserved.</p>
+    </div>
+  </body>
+</html>

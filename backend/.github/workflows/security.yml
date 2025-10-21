@@ -1,0 +1,23 @@
+# .github/workflows/security.yml
+name: Security Audit
+
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.9"
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install safety bandit
+      - name: Run security tests
+        run: |
+          python manage.py test api.tests.test_security
+          safety check
+          bandit -r ./
