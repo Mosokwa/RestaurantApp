@@ -39,6 +39,7 @@ DATABASES = {
 CORS_ALLOWED_ORIGINS = [
     "https://restaurantsowners.netlify.app/",
     "https://restaurantscustomers.netlify.app/",
+    "https://restaurantapp-1-t269.onrender.com",
 ]
 
 # Or allow all for demo simplicity
@@ -47,7 +48,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 CSRF_TRUSTED_ORIGINS = [
     "https://restaurantsowners.netlify.app/",
     "https://restaurantscustomers.netlify.app/",
-    "https://*.onrender.com",
+    "https://restaurantapp-1-t269.onrender.com",
 ]
 
 # =====================
