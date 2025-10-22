@@ -42,10 +42,10 @@ router.register(r'kitchen/orders', KitchenOrderViewSet, basename='kitchenorder')
 
 urlpatterns = [
     # Include router URLs
-    path('api/', include(router.urls)),
+    path('routes/', include(router.urls)),
 
     # database check
-    path('api/health/', health_check, name='health_check'),
+    path('health/', health_check, name='health_check'),
 
     #authentication
     path('auth/signup/', SignupView.as_view(), name='signup'),
