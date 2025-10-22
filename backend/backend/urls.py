@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include, re_path
-from api.frontend import ReactAppView
+# from api.frontend import ReactAppView
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -24,7 +24,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
 
-    re_path(r'^(?!admin/|api/|static/|media/).*$', ReactAppView.as_view(), name='react_app')
+    # re_path(r'^(?!admin/|api/|static/|media/).*$', ReactAppView.as_view(), name='react_app')
 ]
 
 if settings.DEBUG:
