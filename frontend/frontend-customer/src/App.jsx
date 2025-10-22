@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { store } from './store/store';
-import Layout from './components/layout';
+import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Homepage from './pages/Homepage';
 import Login from './pages/Login';
