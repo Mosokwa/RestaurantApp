@@ -195,14 +195,20 @@ const AppContent = () => {
 
 
   useEffect(() => {
-    const initializeApp = async () => {
+    const initializeAppSafely = async () => {
+      // Prevent multiple initializations
+      if (appInitialized) {
+        console.log('✅ App already initialized, skipping...');
+        return;
+      }
+
       try {
         console.log('🔄 Starting app initialization...');
         
-        // Initialize CSRF first
+        // Initialize CSRF first - this will prevent duplicates internally
         await dispatch(initializeCSRF()).unwrap();
         
-        // Check for token and load user
+        // Check for token and load user only if we have one
         const token = localStorage.getItem('token');
         if (token) {
           console.log('🔐 Token found, loading user...');
@@ -219,8 +225,8 @@ const AppContent = () => {
       }
     };
     
-    initializeApp();
-  }, [dispatch]);
+    initializeAppSafely();
+  }, [dispatch, appInitialized]);
 
 
   if (!appInitialized || (csrfInitialized === false && loading)) {

@@ -6,6 +6,8 @@
   margin: 1.5rem 1.5rem 0 1.5rem;
   padding: 1rem;
   box-shadow: var(--glass-shadow);
+  position: relative;
+  z-index: 1;
 }
 
 .header-content {
@@ -147,16 +149,18 @@
   right: 0;
   top: 3rem;
   width: 12rem;
-  backdrop-filter: var(--glass-blur);
+  /* backdrop-filter: var(--glass-blur); */
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--glass-radius);
   padding: 0.5rem;
-  z-index: 50;
+  z-index: 1000 !important;
+  pointer-events: auto !important;
   box-shadow: var(--glass-shadow-hover);
 }
 
 .dropdown-item {
+  cursor: pointer !important;
   width: 100%;
   text-align: left;
   padding: 0.5rem 0.75rem;
@@ -164,7 +168,6 @@
   border: none;
   background: transparent;
   color: white;
-  cursor: pointer;
   transition: var(--transition-smooth);
   font-size: 0.875rem;
   font-family: var(--font-body);

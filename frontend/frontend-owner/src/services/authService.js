@@ -65,14 +65,33 @@ export const authService = {
   },
 
   logout: async () => {
-    const response = await api.post('/auth/logout/');
-    
-    // Clear all tokens
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('csrfToken');
-    
-    return response.data;
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      // Only try API logout if we have a refresh token
+      if (refreshToken) {
+        const response = await api.post('/auth/logout/', { refresh: refreshToken });
+      }
+      
+      // Always clear local storage
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('csrfToken');
+      localStorage.removeItem('pendingVerificationEmail');
+      localStorage.removeItem('pendingUserType');
+      
+      return { message: 'Logout successful' };
+    } catch (error) {
+      // Even if API call fails, clear local storage
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('csrfToken');
+      localStorage.removeItem('pendingVerificationEmail');
+      localStorage.removeItem('pendingUserType');
+      
+      // Still return success since we cleared local storage
+      return { message: 'Logout successful' };
+    }
   },
 
   // Staff management

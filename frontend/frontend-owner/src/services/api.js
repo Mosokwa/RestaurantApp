@@ -16,6 +16,7 @@ const api = axios.create({
 let csrfToken = localStorage.getItem('csrfToken');
 let isInitialized = false;
 let initializationPromise = null;
+let initializationCount = 0;
 
 // Robust CSRF token management
 export const getCSRFToken = async (forceRefresh = false) => {
@@ -24,8 +25,12 @@ export const getCSRFToken = async (forceRefresh = false) => {
   }
 
   if (initializationPromise) {
+    console.log('🔄 CSRF initialization already in progress, reusing promise...');
     return initializationPromise;
   }
+
+  initializationCount++;
+  console.log(`🔄 CSRF initialization attempt #${initializationCount}`);
 
   initializationPromise = (async () => {
     try {
@@ -44,6 +49,7 @@ export const getCSRFToken = async (forceRefresh = false) => {
       const newToken = response.data.csrfToken;
       csrfToken = newToken;
       localStorage.setItem('csrfToken', newToken);
+      isInitialized = true;
       
       console.log('✅ CSRF token obtained');
       return newToken;
@@ -54,6 +60,7 @@ export const getCSRFToken = async (forceRefresh = false) => {
       if (error.response?.status === 403 || error.response?.status === 401) {
         csrfToken = null;
         localStorage.removeItem('csrfToken');
+        isInitialized = false;
       }
       
       throw error;
@@ -140,18 +147,25 @@ api.interceptors.response.use(
 // Initialize CSRF token once per app load
 export const initializeApp = async () => {
   if (isInitialized && csrfToken) {
+    console.log('✅ CSRF already initialized, skipping...');
     return csrfToken;
   }
 
-  try {
-    const token = await getCSRFToken();
-    isInitialized = true;
-    return token;
-  } catch (error) {
-    console.warn('⚠️ CSRF initialization failed, continuing without token:', error.message);
-    isInitialized = true;
-    return null;
+  // If already initializing, wait for the existing promise
+  if (initializationPromise) {
+    console.log('🔄 CSRF initialization already in progress, waiting...');
+    return initializationPromise;
   }
+
+  return getCSRFToken();
+  
 };
+
+// Export initialization state for external checking
+export const getCSRFState = () => ({
+  isInitialized,
+  hasToken: !!csrfToken,
+  initializationInProgress: !!initializationPromise
+});
 
 export default api;

@@ -1,18 +1,29 @@
 // store/slices/authSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { authService } from '../../services/authService';
+import { initializeApp, getCSRFState } from '../../services/api';
 
-// CSRF Token Management
+// CSRF Token Management - Uses centralized initialization
 export const initializeCSRF = createAsyncThunk(
   'auth/initializeCSRF',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
     try {
-      console.log('🔄 Initializing CSRF protection...');
-      const response = await authService.getCurrentOwner().catch(() => ({ success: true }));
-      console.log('✅ CSRF protection verified');
-      return { success: true };
+      const state = getState();
+      
+      // Check if already initialized or initializing
+      if (state.auth.csrfInitialized) {
+        console.log('✅ CSRF already initialized in Redux state');
+        return { success: true, skipped: true };
+      }
+
+      console.log('🔄 Starting CSRF initialization via Redux...');
+      const token = await initializeApp(); // Use centralized function
+      
+      console.log('✅ CSRF protection initialized via Redux');
+      return { success: true, csrfToken: token };
     } catch (error) {
-      console.warn('⚠️ CSRF verification failed, continuing anyway:', error.message);
+      console.warn('⚠️ CSRF initialization failed, continuing anyway:', error.message);
+      // It's okay if CSRF fails - it will be retried on first API call
       return { success: false, error: error.message };
     }
   }
@@ -306,10 +317,18 @@ const authSlice = createSlice({
       state.requires2FA = false;
       state.tempLoginData = null;
       state.error = null;
+      state.loginError = null;
+      state.registerError = null;
+      state.staffError = null;
+      state.verificationError = null;
       state.successMessage = null;
       
+      // Clear all localStorage items
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
+      localStorage.removeItem('csrfToken');
+      localStorage.removeItem('pendingVerificationEmail');
+      localStorage.removeItem('pendingUserType');
     },
     
     clearVerificationData: (state) => {

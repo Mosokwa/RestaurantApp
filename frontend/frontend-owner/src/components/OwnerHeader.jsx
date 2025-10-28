@@ -1,19 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Bell, ChevronDown, Search, Menu } from 'lucide-react';
 import { switchRestaurant, logoutOwner } from '../store/slices/ownerAuthSlice';
 import { extractDataFromResponse } from '../utils/paginationUtils';
 import './styles/OwnerHeader.css';
+import { useNavigate } from 'react-router-dom';
 
 const OwnerHeader = ({ onToggleSidebar }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { owner, restaurants, currentRestaurant } = useSelector(state => state.ownerAuth);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const dropdownRef = useRef(null);
 
   // Extract restaurants from possible paginated response
   const restaurantsList = Array.isArray(restaurants) ? restaurants : extractDataFromResponse(restaurants);
 
   const safeRestaurantsList = Array.isArray(restaurantsList) ? restaurantsList : [];
+
+  const handleRestaurantSwitch = (restaurantId) => {
+    dispatch(switchRestaurant(restaurantId));
+  };
 
   console.log('🔍 OwnerHeader Debug:', {
     restaurantsRaw: restaurants,
@@ -24,12 +32,37 @@ const OwnerHeader = ({ onToggleSidebar }) => {
     restaurantsListIsArray: Array.isArray(restaurantsList)
   });
 
-  const handleRestaurantSwitch = (restaurantId) => {
-    dispatch(switchRestaurant(restaurantId));
-  };
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
 
-  const handleLogout = () => {
-    dispatch(logoutOwner());
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserMenu]);
+
+
+  const handleLogout = async () => {
+    console.log('Logout function called!');
+    try {
+      await authService.logout();
+      dispatch(logoutOwner());
+      navigate('/login');
+      console.log('Logout successful!');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still clear state and redirect
+      dispatch(logoutOwner());
+      navigate('/login');
+    }
   };
 
   return (
@@ -67,7 +100,12 @@ const OwnerHeader = ({ onToggleSidebar }) => {
           </div>
 
           <div className="user-menu">
-            <button onClick={() => setShowUserMenu(!showUserMenu)} className="user-button">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowUserMenu(!showUserMenu);
+              }} 
+             className="user-button">
               <div className="user-avatar">
                 {owner?.first_name?.[0]}{owner?.last_name?.[0]}
               </div>
@@ -77,10 +115,17 @@ const OwnerHeader = ({ onToggleSidebar }) => {
 
             {showUserMenu && (
               <div className="user-dropdown">
-                <button className="dropdown-item">Profile Settings</button>
-                <button className="dropdown-item">Account Settings</button>
+                <button className="dropdown-item" 
+                onClick={() => console.log('Profile clicked')}>Profile Settings</button>
+                <button className="dropdown-item" 
+                onClick={() => console.log('Account clicked')}>Account Settings</button>
                 <hr className="dropdown-divider" />
-                <button onClick={handleLogout} className="dropdown-item logout-item">
+                <button onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('Logout clicked!');
+                      handleLogout();
+                    }}
+                     className="dropdown-item logout-item">
                   Logout
                 </button>
               </div>
