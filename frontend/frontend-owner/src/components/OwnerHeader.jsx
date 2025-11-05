@@ -55,13 +55,20 @@ const OwnerHeader = ({ onToggleSidebar }) => {
     try {
       await authService.logout();
       dispatch(logoutOwner());
-      navigate('/login');
+      navigate('/login', { replace: true });
       console.log('Logout successful!');
+
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
     } catch (error) {
       console.error('Logout error:', error);
       // Still clear state and redirect
       dispatch(logoutOwner());
-      navigate('/login');
+      navigate('/login', { replace: true });
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
     }
   };
 
