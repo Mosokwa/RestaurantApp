@@ -113,11 +113,11 @@ urlpatterns = [
     path('homepage/special-offers/', HomepageSpecialOffersView.as_view(), name='homepage_special_offers'),
 
     #personalized recommendations endpoints
-    path('api/recommendations/personalized/', PersonalizedRecommendationView.as_view(), name='personalized-recommendations'),
-    path('api/user/preferences/', UserPreferenceView.as_view(), name='user-preferences'),
-    path('api/recommendations/trending/', TrendingRecommendationView.as_view(), name='trending-recommendations'),
-    path('api/recommendations/<int:item_id>/similar/', SimilarItemsView.as_view(), name='similar-items'),
-    path('api/user/track-behavior/', TrackUserBehaviorView.as_view(), name='track-behavior'),
+    path('recommendations/personalized/', PersonalizedRecommendationView.as_view(), name='personalized-recommendations'),
+    path('user/preferences/', UserPreferenceView.as_view(), name='user-preferences'),
+    path('recommendations/trending/', TrendingRecommendationView.as_view(), name='trending-recommendations'),
+    path('recommendations/<int:item_id>/similar/', SimilarItemsView.as_view(), name='similar-items'),
+    path('user/track-behavior/', TrackUserBehaviorView.as_view(), name='track-behavior'),
 
     # Restaurant-specific recommendation endpoints
     path('restaurants/<int:restaurant_id>/homepage-recommendations/', RestaurantHomepageRecommendationsView.as_view(), name='restaurant-homepage-recommendations'),
@@ -191,31 +191,31 @@ urlpatterns = [
     path('menu-items/bulk-modifiers/', BulkMenuItemModifiersView.as_view(), name='bulk_menu_item_modifiers'),
 
     # Review and Rating endpoints
-    path('api/restaurants/<int:restaurant_id>/reviews/', RestaurantReviewListView.as_view(), name='restaurant_reviews'),
-    path('api/menu-items/<int:menu_item_id>/reviews/', DishReviewListView.as_view(), name='dish_reviews'),
-    path('api/reviews/<int:review_id>/response/', ReviewResponseView.as_view(), name='review_response'),
-    path('api/reviews/<int:review_id>/helpful-vote/', ReviewHelpfulVoteView.as_view(), name='review_helpful_vote'),
-    path('api/reviews/<int:review_id>/report/', ReviewReportView.as_view(), name='review_report'),
-    path('api/restaurants/<int:restaurant_id>/review-analytics/', RestaurantReviewAnalyticsView.as_view(), name='review_analytics'),
-    path('api/user/reviews/', UserReviewsView.as_view(), name='user_reviews'),
-    path('api/restaurants/<int:restaurant_id>/moderation/reviews/', ReviewModerationListView.as_view(), name='review_moderation_list'),
-    path('api/reviews/<int:review_id>/moderate/', ReviewModerationUpdateView.as_view(), name='review_moderate'),
+    path('restaurants/<int:restaurant_id>/reviews/', RestaurantReviewListView.as_view(), name='restaurant_reviews'),
+    path('menu-items/<int:menu_item_id>/reviews/', DishReviewListView.as_view(), name='dish_reviews'),
+    path('reviews/<int:review_id>/response/', ReviewResponseView.as_view(), name='review_response'),
+    path('reviews/<int:review_id>/helpful-vote/', ReviewHelpfulVoteView.as_view(), name='review_helpful_vote'),
+    path('reviews/<int:review_id>/report/', ReviewReportView.as_view(), name='review_report'),
+    path('restaurants/<int:restaurant_id>/review-analytics/', RestaurantReviewAnalyticsView.as_view(), name='review_analytics'),
+    path('user/reviews/', UserReviewsView.as_view(), name='user_reviews'),
+    path('restaurants/<int:restaurant_id>/moderation/reviews/', ReviewModerationListView.as_view(), name='review_moderation_list'),
+    path('reviews/<int:review_id>/moderate/', ReviewModerationUpdateView.as_view(), name='review_moderate'),
 
     # Restaurant rating endpoints
-    path('api/restaurants/<int:restaurant_id>/rate/', RestaurantRatingView.as_view(), name='restaurant_rate'),
-    path('api/restaurants/<int:restaurant_id>/quick-rate/', QuickRatingView.as_view(), name='restaurant_quick_rate'),
+    path('restaurants/<int:restaurant_id>/rate/', RestaurantRatingView.as_view(), name='restaurant_rate'),
+    path('restaurants/<int:restaurant_id>/quick-rate/', QuickRatingView.as_view(), name='restaurant_quick_rate'),
 
     # Dish rating endpoints
-    path('api/menu-items/<int:menu_item_id>/rate/', DishRatingView.as_view(), name='dish_rate'),
+    path('menu-items/<int:menu_item_id>/rate/', DishRatingView.as_view(), name='dish_rate'),
 
     # Rating statistics
-    path('api/ratings/stats/', RatingStatsView.as_view(), name='rating_stats'),
+    path('ratings/stats/', RatingStatsView.as_view(), name='rating_stats'),
 
     # Bulk rating operations
-    path('api/ratings/bulk/', BulkRatingView.as_view(), name='bulk_rating'),
+    path('ratings/bulk/', BulkRatingView.as_view(), name='bulk_rating'),
 
     # User ratings
-    path('api/user/ratings/', UserRatingsView.as_view(), name='user_ratings'),
+    path('user/ratings/', UserRatingsView.as_view(), name='user_ratings'),
 
     # Order endpoints
     path('orders/', OrderListView.as_view(), name='order_list'),
@@ -229,30 +229,30 @@ urlpatterns = [
     path('orders/<uuid:order_uuid>/with-offers/', OrderDetailView.as_view(), name='order-detail-with-offers'),
 
     # Multi-Restaurant Loyalty Endpoints
-    path('api/loyalty/restaurant-status/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'restaurant_status'}), name='restaurant-loyalty-status'),
-    path('api/loyalty/enroll/', MultiRestaurantLoyaltyViewSet.as_view({'post': 'enroll'}), name='enroll-loyalty'),
-    path('api/loyalty/restaurant-rewards/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'restaurant_rewards'}), name='restaurant-rewards'),
-    path('api/loyalty/my-restaurants/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'my_restaurants'}), name='my-loyalty-restaurants'),
-    path('api/loyalty/redeem-restaurant/', MultiRestaurantLoyaltyViewSet.as_view({'post': 'redeem_at_restaurant'}), name='redeem-at-restaurant'),
-    path('api/loyalty/validate-redemption/', MultiRestaurantLoyaltyViewSet.as_view({'post': 'validate_redemption'}), name='validate-redemption'),
+    path('loyalty/restaurant-status/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'restaurant_status'}), name='restaurant-loyalty-status'),
+    path('loyalty/enroll/', MultiRestaurantLoyaltyViewSet.as_view({'post': 'enroll'}), name='enroll-loyalty'),
+    path('loyalty/restaurant-rewards/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'restaurant_rewards'}), name='restaurant-rewards'),
+    path('loyalty/my-restaurants/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'my_restaurants'}), name='my-loyalty-restaurants'),
+    path('loyalty/redeem-restaurant/', MultiRestaurantLoyaltyViewSet.as_view({'post': 'redeem_at_restaurant'}), name='redeem-at-restaurant'),
+    path('loyalty/validate-redemption/', MultiRestaurantLoyaltyViewSet.as_view({'post': 'validate_redemption'}), name='validate-redemption'),
     
     # Customer Loyalty Endpoints
-    path('api/loyalty/points/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'points'}), name='loyalty-points'),
-    path('api/loyalty/transactions/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'transactions'}), name='loyalty-transactions'),
-    path('api/loyalty/redemptions/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'redemptions'}), name='loyalty-redemptions'),
-    path('api/loyalty/referral/', MultiRestaurantLoyaltyViewSet.as_view({'post': 'referral'}), name='customer-referral'),
-    path('api/loyalty/referral-stats/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'referral_stats'}), name='referral-stats'),
-    path('api/loyalty/referral-history/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'referral_history'}), name='referral-history'),
+    path('loyalty/points/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'points'}), name='loyalty-points'),
+    path('loyalty/transactions/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'transactions'}), name='loyalty-transactions'),
+    path('loyalty/redemptions/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'redemptions'}), name='loyalty-redemptions'),
+    path('loyalty/referral/', MultiRestaurantLoyaltyViewSet.as_view({'post': 'referral'}), name='customer-referral'),
+    path('loyalty/referral-stats/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'referral_stats'}), name='referral-stats'),
+    path('loyalty/referral-history/', MultiRestaurantLoyaltyViewSet.as_view({'get': 'referral_history'}), name='referral-history'),
     
     # Advanced Ordering Endpoints
-    path('api/orders/group/', GroupOrderViewSet.as_view({'post': 'create'}), name='create-group-order'),
-    path('api/orders/group/join/', GroupOrderViewSet.as_view({'post': 'join'}), name='join-group-order'),
-    path('api/orders/schedule/', ScheduledOrderViewSet.as_view({'post': 'create'}), name='schedule-order'),
-    path('api/orders/template/create-order/', AdvancedOrderViewSet.as_view({'post': 'create_from_template'}), name='create-order-from-template'),
+    path('orders/group/', GroupOrderViewSet.as_view({'post': 'create'}), name='create-group-order'),
+    path('orders/group/join/', GroupOrderViewSet.as_view({'post': 'join'}), name='join-group-order'),
+    path('orders/schedule/', ScheduledOrderViewSet.as_view({'post': 'create'}), name='schedule-order'),
+    path('orders/template/create-order/', AdvancedOrderViewSet.as_view({'post': 'create_from_template'}), name='create-order-from-template'),
     
     # Restaurant Owner Management
-    path('api/owner/loyalty/overview/', OwnerLoyaltyDashboardViewSet.as_view({'get': 'overview'}), name='owner-loyalty-overview'),
-    path('api/owner/loyalty/bulk-toggle/',OwnerLoyaltyDashboardViewSet.as_view({'post': 'bulk_toggle'}), name='bulk-toggle-loyalty'),
+    path('owner/loyalty/overview/', OwnerLoyaltyDashboardViewSet.as_view({'get': 'overview'}), name='owner-loyalty-overview'),
+    path('owner/loyalty/bulk-toggle/',OwnerLoyaltyDashboardViewSet.as_view({'post': 'bulk_toggle'}), name='bulk-toggle-loyalty'),
     
     # Payment endpoints
     path('payments/create/', PaymentCreateView.as_view(), name='payment_create'),
@@ -270,70 +270,70 @@ urlpatterns = [
     path('cart/with-offers/', CartDetailView.as_view(), name='cart-with-offers'),
 
     # Sales Analytics URLs
-    path('api/sales/analytics/', RestaurantSalesAnalyticsView.as_view(), name='sales-analytics'),
-    path('api/sales/daily-report/', DailySalesReportView.as_view(), name='daily-sales-report'),
-    path('api/sales/daily-report/<int:restaurant_id>/', DailySalesReportView.as_view(), name='daily-sales-report-restaurant'),
-    path('api/sales/monthly-report/', MonthlySalesReportView.as_view(), name='monthly-sales-report'),
-    path('api/sales/monthly-report/<int:restaurant_id>/', MonthlySalesReportView.as_view(), name='monthly-sales-report-restaurant'),
-    path('api/sales/performance-metrics/', RestaurantPerformanceMetricsView.as_view(), name='performance-metrics'),
-    path('api/sales/performance-metrics/<int:restaurant_id>/', RestaurantPerformanceMetricsView.as_view(), name='performance-metrics-restaurant'),
-    path('api/sales/trends/<int:restaurant_id>/', SalesTrendsView.as_view(), name='sales-trends'),
+    path('sales/analytics/', RestaurantSalesAnalyticsView.as_view(), name='sales-analytics'),
+    path('sales/daily-report/', DailySalesReportView.as_view(), name='daily-sales-report'),
+    path('sales/daily-report/<int:restaurant_id>/', DailySalesReportView.as_view(), name='daily-sales-report-restaurant'),
+    path('sales/monthly-report/', MonthlySalesReportView.as_view(), name='monthly-sales-report'),
+    path('sales/monthly-report/<int:restaurant_id>/', MonthlySalesReportView.as_view(), name='monthly-sales-report-restaurant'),
+    path('sales/performance-metrics/', RestaurantPerformanceMetricsView.as_view(), name='performance-metrics'),
+    path('sales/performance-metrics/<int:restaurant_id>/', RestaurantPerformanceMetricsView.as_view(), name='performance-metrics-restaurant'),
+    path('sales/trends/<int:restaurant_id>/', SalesTrendsView.as_view(), name='sales-trends'),
 
     # Analytics endpoints
-    path('api/analytics/customer-insights/<int:restaurant_id>/', CustomerInsightsView.as_view(), name='customer-insights'),
-    path('api/analytics/customer-insights/', CustomerInsightsView.as_view(), name='customer-insights-all'),
+    path('analytics/customer-insights/<int:restaurant_id>/', CustomerInsightsView.as_view(), name='customer-insights'),
+    path('analytics/customer-insights/', CustomerInsightsView.as_view(), name='customer-insights-all'),
     
-    path('api/analytics/menu-performance/<int:restaurant_id>/', MenuPerformanceView.as_view(), name='menu-performance'),
-    path('api/analytics/menu-performance/', MenuPerformanceView.as_view(), name='menu-performance-all'),
+    path('analytics/menu-performance/<int:restaurant_id>/', MenuPerformanceView.as_view(), name='menu-performance'),
+    path('analytics/menu-performance/', MenuPerformanceView.as_view(), name='menu-performance-all'),
     
-    path('api/analytics/operational-metrics/<int:restaurant_id>/', OperationalMetricsView.as_view(), name='operational-metrics'),
-    path('api/analytics/operational-metrics/', OperationalMetricsView.as_view(), name='operational-metrics-all'),
+    path('analytics/operational-metrics/<int:restaurant_id>/', OperationalMetricsView.as_view(), name='operational-metrics'),
+    path('analytics/operational-metrics/', OperationalMetricsView.as_view(), name='operational-metrics-all'),
     
-    path('api/analytics/financial-reports/<int:restaurant_id>/', FinancialReportsView.as_view(), name='financial-reports'),
-    path('api/analytics/financial-reports/', FinancialReportsView.as_view(), name='financial-reports-all'),
+    path('analytics/financial-reports/<int:restaurant_id>/', FinancialReportsView.as_view(), name='financial-reports'),
+    path('analytics/financial-reports/', FinancialReportsView.as_view(), name='financial-reports-all'),
     
-    path('api/analytics/comparative/<int:restaurant_id>/', ComparativeAnalyticsView.as_view(), name='comparative-analytics'),
-    path('api/analytics/comparative/', ComparativeAnalyticsView.as_view(), name='comparative-analytics-all'),
+    path('analytics/comparative/<int:restaurant_id>/', ComparativeAnalyticsView.as_view(), name='comparative-analytics'),
+    path('analytics/comparative/', ComparativeAnalyticsView.as_view(), name='comparative-analytics-all'),
     
-    path('api/analytics/export/', ExportAnalyticsView.as_view(), name='export-analytics'),
+    path('analytics/export/', ExportAnalyticsView.as_view(), name='export-analytics'),
     
-    path('api/analytics/dashboard/<int:restaurant_id>/', DashboardMetricsView.as_view(), name='dashboard-metrics'),
-    path('api/analytics/dashboard/', DashboardMetricsView.as_view(), name='dashboard-metrics-all'),
+    path('analytics/dashboard/<int:restaurant_id>/', DashboardMetricsView.as_view(), name='dashboard-metrics'),
+    path('analytics/dashboard/', DashboardMetricsView.as_view(), name='dashboard-metrics-all'),
 
     # Restaurant discovery and search
-    path('api/restaurants/search/', RestaurantsSearchView.as_view(), name='restaurant-search'),
-    path('api/restaurants/<int:restaurant_id>/availability/', RestaurantAvailabilityView.as_view(), name='restaurant-availability'),
+    path('restaurants/search/', RestaurantsSearchView.as_view(), name='restaurant-search'),
+    path('restaurants/<int:restaurant_id>/availability/', RestaurantAvailabilityView.as_view(), name='restaurant-availability'),
     
     # Restaurant-specific tables
-    path('api/restaurants/<int:restaurant_id>/tables/', 
+    path('restaurants/<int:restaurant_id>/tables/', 
          TableViewSet.as_view({'get': 'list'}), 
          name='restaurant-tables'),
-    path('api/restaurants/<int:restaurant_id>/tables/check-availability/', 
+    path('restaurants/<int:restaurant_id>/tables/check-availability/', 
          TableViewSet.as_view({'post': 'check_availability'}), 
          name='check-availability'),
     
     # Customer reservation management
-    path('api/reservations/my/', 
+    path('reservations/my/', 
          ReservationViewSet.as_view({'get': 'my_reservations'}), 
          name='my-reservations'),
 
     #============POS Integration Endpoints================#  
       
     # Webhook endpoints
-    path('api/webhooks/pos/order-update/', pos_order_webhook, name='pos-order-webhook'),
-    path('api/webhooks/pos/menu-update/', pos_menu_webhook, name='pos-menu-webhook'),
-    path('api/webhooks/pos/inventory-update/', pos_inventory_webhook, name='pos-inventory-webhook'),
+    path('webhooks/pos/order-update/', pos_order_webhook, name='pos-order-webhook'),
+    path('webhooks/pos/menu-update/', pos_menu_webhook, name='pos-menu-webhook'),
+    path('webhooks/pos/inventory-update/', pos_inventory_webhook, name='pos-inventory-webhook'),
 
     # Additional endpoints
-    path('api/owner/tables/status/', TableLayoutViewSet.as_view({'get': 'table_status'}), name='tables-status'),
-    path('api/owner/kitchen/queue/', KitchenOrderViewSet.as_view({'get': 'queue'}), name='kitchen-queue'),
-    path('api/owner/pos/sync/menu/', POSConnectionViewSet.as_view({'post': 'sync_menu'}), name='pos-sync-menu'),
-    path('api/owner/pos/sync/inventory/', POSConnectionViewSet.as_view({'post': 'sync_inventory'}), name='pos-sync-inventory'),
+    path('owner/tables/status/', TableLayoutViewSet.as_view({'get': 'table_status'}), name='tables-status'),
+    path('owner/kitchen/queue/', KitchenOrderViewSet.as_view({'get': 'queue'}), name='kitchen-queue'),
+    path('owner/pos/sync/menu/', POSConnectionViewSet.as_view({'post': 'sync_menu'}), name='pos-sync-menu'),
+    path('owner/pos/sync/inventory/', POSConnectionViewSet.as_view({'post': 'sync_inventory'}), name='pos-sync-inventory'),
 
     # Real-time endpoints
-    path('api/owner/orders/<uuid:order_uuid>/route/', route_order_to_kitchen, name='route-order'),
-    path('api/owner/orders/<uuid:order_uuid>/assign-station/', assign_order_station, name='assign-station'),
-    path('api/owner/orders/<uuid:order_uuid>/preparation-status/', update_preparation_status, name='update-preparation-status'),
+    path('owner/orders/<uuid:order_uuid>/route/', route_order_to_kitchen, name='route-order'),
+    path('owner/orders/<uuid:order_uuid>/assign-station/', assign_order_station, name='assign-station'),
+    path('owner/orders/<uuid:order_uuid>/preparation-status/', update_preparation_status, name='update-preparation-status'),
 
     #============end POS Integration Endpoints================# 
 
