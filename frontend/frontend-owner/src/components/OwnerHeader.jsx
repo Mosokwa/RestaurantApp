@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Bell, ChevronDown, Search, Menu } from 'lucide-react';
 import { switchRestaurant, logoutOwner } from '../store/slices/ownerAuthSlice';
-import { extractDataFromResponse } from '../utils/paginationUtils';
 import './styles/OwnerHeader.css';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,22 +14,19 @@ const OwnerHeader = ({ onToggleSidebar }) => {
   const dropdownRef = useRef(null);
 
   // Extract restaurants from possible paginated response
-  const restaurantsList = Array.isArray(restaurants) ? restaurants : extractDataFromResponse(restaurants);
+  const restaurantsList = Array.isArray(restaurants) ? restaurants : [];
 
-  const safeRestaurantsList = Array.isArray(restaurantsList) ? restaurantsList : [];
+  console.log('🔍 Restaurant Dropdown Debug:', {
+    restaurantsList: restaurantsList,
+    currentRestaurant: currentRestaurant,
+    currentRestaurantId: currentRestaurant?.restaurant_id,
+    restaurantIds: restaurantsList.map(r => r.restaurant_id),
+    selectValue: currentRestaurant?.restaurant_id || ''
+  });
 
   const handleRestaurantSwitch = (restaurantId) => {
     dispatch(switchRestaurant(restaurantId));
   };
-
-  console.log('🔍 OwnerHeader Debug:', {
-    restaurantsRaw: restaurants,
-    restaurantsType: typeof restaurants,
-    isArray: Array.isArray(restaurants),
-    restaurantsList: restaurantsList,
-    restaurantsListType: typeof restaurantsList,
-    restaurantsListIsArray: Array.isArray(restaurantsList)
-  });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -86,8 +82,8 @@ const OwnerHeader = ({ onToggleSidebar }) => {
               onChange={(e) => handleRestaurantSwitch(e.target.value)}
               className="restaurant-select"
             >
-              {safeRestaurantsList.length > 0 ? (
-                safeRestaurantsList.map(restaurant => (
+              {restaurantsList.length > 0 ? (
+                restaurantsList.map(restaurant => (
                   <option key={restaurant.restaurant_id} value={restaurant.restaurant_id}>
                     {restaurant.name}
                   </option>

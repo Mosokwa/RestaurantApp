@@ -11,11 +11,15 @@ export const fetchOwnerProfile = createAsyncThunk(
     ]);
 
     const ownerData = extractDataFromResponse(ownerResponse);
-    const restaurantsData = extractDataFromResponse(restaurantsResponse);
+    const restaurantsData = restaurantsResponse.data;
+    const restaurantsArray = restaurantsData?.restaurants || [];
+
+    console.log(restaurantsResponse);
+    console.log(restaurantsArray);
 
     return { 
       owner: ownerData,
-      restaurants: restaurantsData
+      restaurants: restaurantsArray
     };
   }
 );

@@ -4,13 +4,13 @@ import { handleServiceResponse, extractServiceData } from './apiResponseHandler'
 export const analyticsService = {
   // Dashboard Overview Data
   getDashboardOverview: async (restaurantId) => {
-    const response = await api.get(`/api/analytics/dashboard/${restaurantId}/`);
+    const response = await api.get(`/analytics/dashboard/${restaurantId}/`);
     return handleServiceResponse(response);
   },
 
   // Today's Sales Data
   getTodaySales: async (restaurantId) => {
-    const response = await api.get(`/api/sales/daily-report/?restaurant_id=${restaurantId}`);
+    const response = await api.get(`/sales/daily-report/?restaurant_id=${restaurantId}`);
     return handleServiceResponse(response);
   },
 
@@ -22,25 +22,25 @@ export const analyticsService = {
 
   // Kitchen Queue
   getKitchenQueue: async (restaurantId) => {
-    const response = await api.get(`/api/owner/kitchen/queue/?restaurant_id=${restaurantId}`);
+    const response = await api.get(`/owner/kitchen/queue/?restaurant_id=${restaurantId}`);
     return handleServiceResponse(response);
   },
 
   // Performance Metrics
   getPerformanceMetrics: async (restaurantId) => {
-    const response = await api.get(`/api/sales/performance-metrics/${restaurantId}/`);
+    const response = await api.get(`/sales/performance-metrics/${restaurantId}/`);
     return handleServiceResponse(response);
   },
 
   // Customer Insights
   getCustomerInsights: async (restaurantId) => {
-    const response = await api.get(`/api/analytics/customer-insights/${restaurantId}/`);
+    const response = await api.get(`/analytics/customer-insights/${restaurantId}/`);
     return handleServiceResponse(response);
   },
 
   // Recent Alerts/Notifications
   getRecentAlerts: async (restaurantId) => {
-    const response = await api.get(`/api/analytics/alerts/${restaurantId}/`);
+    const response = await api.get(`/analytics/alerts/${restaurantId}/`);
     return handleServiceResponse(response);
   }
 };

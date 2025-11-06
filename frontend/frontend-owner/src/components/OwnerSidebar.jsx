@@ -101,6 +101,7 @@ const OwnerSidebar = ({ isOpen, onToggle, isMobile }) => {
     { 
       id: 'marketing', label: 'Marketing', icon: Megaphone,
       children: [
+        {id: 'homepage', label: 'My Restaurant Page', path: '/owner/marketing/homepage' },
         { id: 'offers', label: 'Special Offers', path: '/owner/marketing/offers' },
         { id: 'loyalty', label: 'Loyalty Program', path: '/owner/marketing/loyalty' },
         { id: 'communications', label: 'Customer Communications', path: '/owner/marketing/communications' }
