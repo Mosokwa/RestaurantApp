@@ -329,6 +329,11 @@ const authSlice = createSlice({
       localStorage.removeItem('csrfToken');
       localStorage.removeItem('pendingVerificationEmail');
       localStorage.removeItem('pendingUserType');
+      
+      // Cancel all pending API requests
+      if (typeof authService.cancelAllRequests === 'function') {
+        authService.cancelAllRequests();
+      }
     },
     
     clearVerificationData: (state) => {

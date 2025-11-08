@@ -35,15 +35,29 @@ const ownerAuthSlice = createSlice({
   },
   reducers: {
     switchRestaurant: (state, action) => {
-      state.currentRestaurant = state.restaurants.find(
-        r => r.restaurant_id === action.payload
-      );
+      if (action.payload === null) {
+        // Clear current restaurant
+        state.currentRestaurant = null;
+      } else {
+        // Set specific restaurant
+        state.currentRestaurant = state.restaurants.find(
+          r => r.restaurant_id === action.payload
+        );
+      }
     },
+
+    clearCurrentRestaurant: (state) => {
+      state.currentRestaurant = null;
+    },
+
     logoutOwner: (state) => {
       state.owner = null;
       state.restaurants = [];
       state.currentRestaurant = null;
       authService.logout();
+      if (authService.cancelAllRequests) {
+        authService.cancelAllRequests();
+      }
     }
   },
   extraReducers: (builder) => {
@@ -55,7 +69,7 @@ const ownerAuthSlice = createSlice({
         state.loading = false;
         state.owner = action.payload.owner;
         state.restaurants = action.payload.restaurants;
-        state.currentRestaurant = action.payload.restaurants[0] || null;
+        state.currentRestaurant = null;
       })
       .addCase(fetchOwnerProfile.rejected, (state, action) => {
         state.loading = false;
@@ -64,5 +78,5 @@ const ownerAuthSlice = createSlice({
   }
 });
 
-export const { switchRestaurant, logoutOwner } = ownerAuthSlice.actions;
+export const { switchRestaurant, clearCurrentRestaurant, logoutOwner } = ownerAuthSlice.actions;
 export default ownerAuthSlice.reducer;

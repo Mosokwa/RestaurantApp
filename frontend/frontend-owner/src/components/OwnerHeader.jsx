@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Bell, ChevronDown, Search, Menu } from 'lucide-react';
-import { switchRestaurant, logoutOwner } from '../store/slices/ownerAuthSlice';
+import { Bell, ChevronDown, Search, Menu, Building } from 'lucide-react';
+import { switchRestaurant, logoutOwner, clearCurrentRestaurant } from '../store/slices/ownerAuthSlice';
 import './styles/OwnerHeader.css';
 import { useNavigate } from 'react-router-dom';
+import { authService } from '../services/authService';
 
 const OwnerHeader = ({ onToggleSidebar }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -16,16 +17,16 @@ const OwnerHeader = ({ onToggleSidebar }) => {
   // Extract restaurants from possible paginated response
   const restaurantsList = Array.isArray(restaurants) ? restaurants : [];
 
-  console.log('🔍 Restaurant Dropdown Debug:', {
-    restaurantsList: restaurantsList,
-    currentRestaurant: currentRestaurant,
-    currentRestaurantId: currentRestaurant?.restaurant_id,
-    restaurantIds: restaurantsList.map(r => r.restaurant_id),
-    selectValue: currentRestaurant?.restaurant_id || ''
-  });
-
   const handleRestaurantSwitch = (restaurantId) => {
-    dispatch(switchRestaurant(restaurantId));
+    if (restaurantId) {
+      dispatch(switchRestaurant(restaurantId));
+      // Stay on the current page, just refresh the data
+    }
+  };
+
+  const handleBackToSelection = () => {
+    dispatch(clearCurrentRestaurant());
+    navigate('/owner/dashboard'); // This will now show RestaurantSelectionPage
   };
 
   // Close dropdown when clicking outside
@@ -47,24 +48,32 @@ const OwnerHeader = ({ onToggleSidebar }) => {
 
 
   const handleLogout = async () => {
-    console.log('Logout function called!');
+    console.log('🔄 Logout function called!');
+    
+    // Immediately close user menu
+    setShowUserMenu(false);
+    
+    // Cancel all pending API calls immediately
+    if (authService.cancelAllRequests) {
+      authService.cancelAllRequests();
+    }
+    
     try {
       await authService.logout();
       dispatch(logoutOwner());
-      navigate('/login', { replace: true });
-      console.log('Logout successful!');
+      console.log('✅ Logout successful!');
 
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 100);
+      window.location.href = '/login';
+
     } catch (error) {
       console.error('Logout error:', error);
       // Still clear state and redirect
       dispatch(logoutOwner());
-      navigate('/login', { replace: true });
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 100);
+      if (authService.clearTokens) {
+        authService.clearTokens();
+      }
+      
+      window.location.href = '/login';
     }
   };
 
@@ -75,25 +84,45 @@ const OwnerHeader = ({ onToggleSidebar }) => {
           <button onClick={onToggleSidebar} className="sidebar-toggle">
             <Menu size={20} />
           </button>
-          
-          <div className="restaurant-switcher">
-            <select
-              value={currentRestaurant?.restaurant_id || ''}
-              onChange={(e) => handleRestaurantSwitch(e.target.value)}
-              className="restaurant-select"
+
+          {currentRestaurant && (
+            <button 
+              onClick={handleBackToSelection}
+              className="back-to-selection"
+              title="Back to All Restaurants"
             >
-              {restaurantsList.length > 0 ? (
-                restaurantsList.map(restaurant => (
-                  <option key={restaurant.restaurant_id} value={restaurant.restaurant_id}>
-                    {restaurant.name}
-                  </option>
-                ))
-              ) : (
-                <option value="">No restaurants</option>
-              )}
-            </select>
-            <ChevronDown className="select-icon" size={16} />
-          </div>
+              <Building size={16} />
+              <span>All Restaurants</span>
+            </button>
+          )}
+          
+          {currentRestaurant && restaurantsList.length > 0 && (
+            <div className="restaurant-switcher">
+              <select
+                value={currentRestaurant?.restaurant_id || ''}
+                onChange={(e) => handleRestaurantSwitch(e.target.value)}
+                className="restaurant-select"
+              >
+                <option value={currentRestaurant.restaurant_id}>
+                  🟢 {currentRestaurant.name}
+                </option>
+                
+                {restaurantsList.length > 1 && (
+                  <option value="" disabled>―― Switch to ――</option>
+                )}
+                
+                {restaurantsList
+                  .filter(restaurant => restaurant.restaurant_id !== currentRestaurant.restaurant_id)
+                  .map(restaurant => (
+                    <option key={restaurant.restaurant_id} value={restaurant.restaurant_id}>
+                      {restaurant.name}
+                    </option>
+                  ))
+                }
+              </select>
+              <ChevronDown className="select-icon" size={16} />
+            </div>
+          )}
         </div>
 
         <div className="right-section">

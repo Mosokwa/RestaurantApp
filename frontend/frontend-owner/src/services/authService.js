@@ -1,6 +1,7 @@
 // services/authService.js
 import api from './api';
 import { extractServiceData, handleServiceResponse } from './apiResponseHandler';
+import { cancelAllRequests } from './api';
 
 export const authService = {
   // Owner-specific authentication
@@ -134,6 +135,21 @@ export const authService = {
   resendVerificationEmail: async (email) => {
     const response = await api.post('/auth/verify-email/', { email });
     return response.data;
+  },
+
+  // NEW: Cancel all pending requests
+  cancelAllRequests: () => {
+    cancelAllRequests();
+  },
+
+  // NEW: Clear tokens locally
+  clearTokens: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('csrfToken');
+    localStorage.removeItem('pendingVerificationEmail');
+    localStorage.removeItem('pendingUserType');
+    cancelAllRequests(); // Also cancel any pending requests
   },
 
 };

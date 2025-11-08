@@ -1,24 +1,57 @@
 import { useSelector } from 'react-redux';
-import { Heart, MessageCircle, HelpCircle } from 'lucide-react';
+import { Heart, MessageCircle, HelpCircle, Building } from 'lucide-react';
 import { extractDataFromResponse } from '../utils/paginationUtils';
 import './styles/OwnerFooter.css';
 
 const OwnerFooter = () => {
   const { todaySales, realTimeOrders, performanceMetrics } = useSelector(state => state.dashboard);
-  const { currentRestaurant } = useSelector(state => state.ownerAuth);
+  const { currentRestaurant, restaurants } = useSelector(state => state.ownerAuth);
 
   // Extract data from possible paginated responses
   const ordersList = extractDataFromResponse(realTimeOrders);
   const salesData = extractDataFromResponse(todaySales);
   const metricsData = extractDataFromResponse(performanceMetrics);
 
-  // Calculate real-time stats from backend data
-  const calculateFooterStats = () => {
+  const calculateOverallStats = () => {
+    const totalRestaurants = restaurants.length || 0;
+    
+    // Calculate total active orders across all restaurants
+    const totalActiveOrders = Array.isArray(ordersList) 
+      ? ordersList.filter(order => ['pending', 'confirmed', 'preparing'].includes(order?.status))?.length || 0
+      : 0;
+
+    // Calculate total revenue across all restaurants (mock data for now)
+    let totalRevenue = 0;
+    if (restaurants.length > 0) {
+      // This would come from an API in real implementation
+      totalRevenue = restaurants.reduce((sum, restaurant) => sum + (restaurant.monthly_revenue || 0), 0);
+    }
+
+    return [
+      { 
+        label: 'Total Restaurants', 
+        value: totalRestaurants.toString(), 
+        change: totalRestaurants > 0 ? `${totalRestaurants} active` : 'No restaurants' 
+      },
+      { 
+        label: 'Active Orders', 
+        value: totalActiveOrders.toString(),
+        change: totalActiveOrders > 0 ? `+${totalActiveOrders}` : 'No active orders'
+      },
+      { 
+        label: 'Monthly Revenue', 
+        value: `$${totalRevenue.toLocaleString()}`,
+        change: totalRevenue > 0 ? '+12% this month' : 'No revenue'
+      }
+    ];
+  };
+
+  // Calculate single restaurant stats for dashboard
+  const calculateRestaurantStats = () => {
     // Active orders (pending, confirmed, preparing)
     const activeOrders = Array.isArray(ordersList) 
       ? ordersList.filter(order => ['pending', 'confirmed', 'preparing'].includes(order?.status))?.length || 0
       : 0;
-
 
     // Today's revenue
     let todayRevenue = 0;
@@ -55,7 +88,8 @@ const OwnerFooter = () => {
     ];
   };
 
-  const quickStats = calculateFooterStats();
+  // Choose which stats to display based on current state
+  const quickStats = currentRestaurant ? calculateRestaurantStats() : calculateOverallStats();
 
   return (
     <footer className="owner-footer">
@@ -63,14 +97,29 @@ const OwnerFooter = () => {
         <div className="footer-stats">
           {quickStats.map((stat, index) => (
             <div key={index} className="stat-item">
-              <p className="stat-label">{stat.label}</p>
-              <div className="stat-value-container">
-                <span className="stat-value">{stat.value}</span>
-                <span className={`stat-change ${
-                  stat.change.includes('+') ? 'positive' : 'negative'
-                }`}>
-                  {stat.change}
-                </span>
+              <div className="stat-icon-container">
+                {currentRestaurant ? (
+                  // Restaurant-specific icons
+                  index === 0 ? <Building size={16} /> :
+                  index === 1 ? <Heart size={16} /> :
+                  <MessageCircle size={16} />
+                ) : (
+                  // Overall business icons
+                  index === 0 ? <Building size={16} /> :
+                  index === 1 ? <HelpCircle size={16} /> :
+                  <Heart size={16} />
+                )}
+              </div>
+              <div className="stat-text">
+                <p className="stat-label">{stat.label}</p>
+                <div className="stat-value-container">
+                  <span className="stat-value">{stat.value}</span>
+                  <span className={`stat-change ${
+                    stat.change.includes('+') ? 'positive' : stat.change.includes('-') ? 'negative' : 'neutral'
+                  }`}>
+                    {stat.change}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
@@ -98,5 +147,6 @@ const OwnerFooter = () => {
     </footer>
   );
 };
+
 
 export default OwnerFooter;

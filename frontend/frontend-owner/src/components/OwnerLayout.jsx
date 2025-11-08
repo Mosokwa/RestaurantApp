@@ -11,10 +11,14 @@ const OwnerLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const dispatch = useDispatch();
-  const { owner, currentRestaurant } = useSelector(state => state.ownerAuth);
+  // const { owner, currentRestaurant } = useSelector(state => state.ownerAuth);
+  const { isAuthenticated } = useSelector(state => state.auth);
+
 
   useEffect(() => {
-    dispatch(fetchOwnerProfile());
+    if (isAuthenticated) {
+      dispatch(fetchOwnerProfile());
+    }
     
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
@@ -29,7 +33,7 @@ const OwnerLayout = () => {
     window.addEventListener('resize', checkMobile);
     
     return () => window.removeEventListener('resize', checkMobile);
-  }, [dispatch]);
+  }, [dispatch, isAuthenticated]);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);

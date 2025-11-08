@@ -6,6 +6,7 @@ import store from './store';
 import { initializeCSRF, loadUserFromToken } from './store/slices/authSlice';
 import OwnerLogin from './pages/OwnerLogin';
 import DashboardOverview from './pages/DashboardOverview';
+import RestaurantSelectionPage from './pages/RestaurantSelectionPage';
 import OwnerRegister from './pages/OwnerRegister';
 import TwoFactorAuth from './components/verification/TwoFactorAuth';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -123,6 +124,7 @@ const AutoRedirectHandler = ({ children }) => {
 // Dashboard Route Component - FIXED
 const DashboardRoute = () => {
   const { user } = useSelector(state => state.auth);
+  const { currentRestaurant } = useSelector(state => state.ownerAuth);
   
   // Add safety check for user object
   if (!user) {
@@ -136,9 +138,30 @@ const DashboardRoute = () => {
     );
   }
 
+  if (!currentRestaurant || !user.email_verified) {
+    return <RestaurantSelectionPage />;
+  }
+
   // Now we can safely check user.email_verified
+  return <DashboardOverview />;
+};
+
+const RestaurantSelectionRoute = () => {
+  const { user } = useSelector(state => state.auth);
+  
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading user data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return user.email_verified ? (
-    <DashboardOverview />
+    <RestaurantSelectionPage />
   ) : (
     <Navigate to="/verify-email" replace />
   );
@@ -288,6 +311,11 @@ const AppContent = () => {
               <Route 
                 path="dashboard" 
                 element={<DashboardRoute />} 
+              />
+
+              <Route 
+                path="restaurants" 
+                element={<RestaurantSelectionRoute />} 
               />
               
               {/* Orders */}

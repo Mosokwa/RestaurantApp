@@ -15,6 +15,7 @@
     "axios": "^1.11.0",
     "bootstrap": "^5.3.8",
     "chart.js": "^4.5.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "facebook-js-sdk": "^1.0.4",
     "jquery": "^3.7.1",

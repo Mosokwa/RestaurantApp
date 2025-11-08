@@ -31,34 +31,35 @@ const DashboardOverview = () => {
   } = useSelector(state => state.dashboard);
   
   const { currentRestaurant } = useSelector(state => state.ownerAuth);
+  const { isAuthenticated } = useSelector(state => state.auth); // ADDED
 
   useEffect(() => {
-    if (currentRestaurant?.restaurant_id) {
-      dispatch(fetchDashboardData(currentRestaurant.restaurant_id))
-        .unwrap()
-        .catch(error => {
-          console.error('Dashboard data fetch failed:', error);
-          // Handle gracefully - maybe show error state
-        });
+    // ADDED: Don't fetch if not authenticated
+    if (!isAuthenticated || !currentRestaurant?.restaurant_id) {
+      return;
     }
-  }, [dispatch, currentRestaurant?.restaurant_id]); // Add proper dependency
+
+    dispatch(fetchDashboardData(currentRestaurant.restaurant_id))
+      .unwrap()
+      .catch(error => {
+        console.error('Dashboard data fetch failed:', error);
+      });
+  }, [dispatch, currentRestaurant?.restaurant_id, isAuthenticated]); // ADDED isAuthenticated
 
   // Auto-refresh real-time data every 30 seconds
   useEffect(() => {
-    if (!autoRefresh || !currentRestaurant) return;
+    // ADDED: Don't set up auto-refresh if not authenticated
+    if (!autoRefresh || !currentRestaurant || !isAuthenticated) return;
 
     const interval = setInterval(() => {
-      dispatch(fetchRealTimeData(currentRestaurant.restaurant_id));
+      // ADDED: Double-check authentication before making request
+      if (isAuthenticated && currentRestaurant) {
+        dispatch(fetchRealTimeData(currentRestaurant.restaurant_id));
+      }
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [autoRefresh, currentRestaurant, dispatch]);
-
-  const handleRefresh = () => {
-    if (currentRestaurant) {
-      dispatch(fetchRealTimeData(currentRestaurant.restaurant_id));
-    }
-  };
+  }, [autoRefresh, currentRestaurant, dispatch, isAuthenticated]); // ADDED isAuthenticated
 
   // Calculate real-time metrics from API data
   const calculateRealTimeMetrics = () => {
@@ -341,6 +342,12 @@ const DashboardOverview = () => {
       </div>
     </div>
   );
+
+  const handleRefresh = () => {
+    if (currentRestaurant && isAuthenticated) { // ADDED isAuthenticated check
+      dispatch(fetchRealTimeData(currentRestaurant.restaurant_id));
+    }
+  };
 
   return (
     <div className="dashboard-overview">

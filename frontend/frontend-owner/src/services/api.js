@@ -3,6 +3,16 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
+// Simple request cancellation manager - ONLY ADDITION
+const pendingRequests = new Map();
+export const cancelAllRequests = () => {
+  pendingRequests.forEach((controller, url) => {
+    controller.abort();
+    console.log(`🚫 Cancelled pending request: ${url}`);
+  });
+  pendingRequests.clear();
+};
+
 // Create axios instance with credentials
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -36,11 +46,7 @@ export const getCSRFToken = async (forceRefresh = false) => {
     try {
       console.log('🔄 Fetching CSRF token...');
       
-      const response = await api.get('/auth/csrf/', {
-        headers: {
-          'X-CSRF-Request': 'true'
-        }
-      });
+      const response = await api.get('/auth/csrf/');
 
       if (!response.data.csrfToken) {
         throw new Error('No CSRF token in response');
@@ -82,11 +88,15 @@ api.interceptors.request.use(
 
     const isStateChangingMethod = ['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase());
     const isInternalAPI = config.url?.startsWith('/');
-    const isCSRFRequest = config.headers['X-CSRF-Request'];
     
-    if (isStateChangingMethod && isInternalAPI && !isCSRFRequest && csrfToken) {
+    if (isStateChangingMethod && isInternalAPI && csrfToken) {
       config.headers['X-CSRFToken'] = csrfToken;
     }
+
+    // ONLY ADDITION: Add AbortController for cancellation
+    const controller = new AbortController();
+    config.signal = controller.signal;
+    pendingRequests.set(config.url, controller);
 
     return config;
   },
@@ -95,15 +105,21 @@ api.interceptors.request.use(
 
 // Response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // ONLY ADDITION: Remove from pending requests on success
+    pendingRequests.delete(response.config.url);
+    return response;
+  },
   async (error) => {
+    // ONLY ADDITION: Remove from pending requests on error
+    if (error.config?.url) {
+      pendingRequests.delete(error.config.url);
+    }
+
     const originalRequest = error.config;
 
     // Handle CSRF token errors (403)
-    if (error.response?.status === 403 && 
-        !originalRequest._csrfRetried &&
-        !originalRequest.headers['X-CSRF-Request']) {
-      
+    if (error.response?.status === 403 && !originalRequest._csrfRetried) {
       try {
         originalRequest._csrfRetried = true;
         await getCSRFToken(true);
@@ -158,7 +174,6 @@ export const initializeApp = async () => {
   }
 
   return getCSRFToken();
-  
 };
 
 // Export initialization state for external checking
