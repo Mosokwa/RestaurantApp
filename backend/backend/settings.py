@@ -20,9 +20,11 @@ from celery.schedules import crontab
 load_dotenv()
 
 GOOGLE_OAUTH2_CLIENT_ID=os.getenv('GOOGLE_OAUTH2_CLIENT_ID')
-GOOGLE_OAUTH2_CLIENT_SECRET=os.getenv('GOOGLE_OAUTH2_CLIENT_SECRET')
-FACEBOOK_APP_ID=os.getenv('FACEBOOK_APP_ID')
-FACEBOOK_APP_SECRET=os.getenv('FACEBOOK_APP_SECRET')
+APPLE_CLIENT_ID = os.getenv('APPLE_CLIENT_ID')
+APPLE_TEAM_ID = os.getenv('APPLE_TEAM_ID')
+APPLE_KEY_ID = os.getenv('APPLE_KEY_ID')
+APPLE_PRIVATE_KEY = os.getenv('APPLE_PRIVATE_KEY')
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -129,9 +131,10 @@ CHANNEL_LAYERS = {
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/1',
+        'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
         }
     }
 }
@@ -303,29 +306,19 @@ SOCIAL_AUTH_PIPELINE = (
 )
 
 # Allauth Social Account Providers
-SOCIALACCOUNT_PROVIDERS = {
-    'google': {
-        'SCOPE': [
-            'profile',
-            'email',
-        ],
-        'AUTH_PARAMS': {
-            'access_type': 'online',
-        },
-        'OAUTH_PKCE_ENABLED': True,
+SOCIAL_AUTH = {
+    'GOOGLE': {
+        'CLIENT_ID': GOOGLE_OAUTH2_CLIENT_ID,
+        'AUTH_URI': 'https://accounts.google.com/o/oauth2/auth',
+        'TOKEN_URI': 'https://oauth2.googleapis.com/token',
+        'CERT_URI': 'https://www.googleapis.com/oauth2/v1/certs',
     },
-    'facebook': {
-        'METHOD': 'oauth2',
-        'SCOPE': ['email', 'public_profile'],
-        'AUTH_PARAMS': {'auth_type': 'reauthenticate'},
-        'FIELDS': [
-            'id',
-            'email',
-            'name',
-            'first_name',
-            'last_name',
-        ],
-        'EXCHANGE_TOKEN': True,
+    'APPLE': {
+        'CLIENT_ID': APPLE_CLIENT_ID,
+        'TEAM_ID': APPLE_TEAM_ID,
+        'KEY_ID': APPLE_KEY_ID,
+        'REDIRECT_URI': os.getenv('APPLE_REDIRECT_URI', ''),
+        'SCOPE': 'name email',
     }
 }
 
@@ -400,6 +393,14 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+
+SECURE_HEADERS = {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+}
 
 CORS_ALLOW_METHODS = [
     'DELETE',
@@ -492,6 +493,12 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(hour=2, minute=0),
     },
 }
+
+# Rate limiting configuration
+RATELIMIT_ENABLE = True
+RATELIMIT_USE_CACHE = 'default'
+RATELIMIT_KEY_PREFIX = 'social_auth'
+
 
 # Loyalty Program Settings
 SITE_NAME = "TastyBites Restaurant"
