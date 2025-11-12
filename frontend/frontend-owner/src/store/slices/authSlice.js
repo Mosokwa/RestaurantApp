@@ -368,6 +368,27 @@ const authSlice = createSlice({
         emailVerified: state.user?.email_verified,
         token: !!state.token
       });
+    },
+
+    socialLogin: (builder) => {
+      return builder
+        .addCase(socialLogin.pending, (state) => {
+          state.loginLoading = true;
+          state.loginError = null;
+        })
+        .addCase(socialLogin.fulfilled, (state, action) => {
+          state.loginLoading = false;
+          state.isAuthenticated = true;
+          state.user = action.payload.user;
+          state.loginError = null;
+          // Store tokens
+          localStorage.setItem('token', action.payload.tokens.access);
+          localStorage.setItem('refreshToken', action.payload.tokens.refresh);
+        })
+        .addCase(socialLogin.rejected, (state, action) => {
+          state.loginLoading = false;
+          state.loginError = action.payload;
+        });
     }
   },
   extraReducers: (builder) => {

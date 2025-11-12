@@ -22,6 +22,10 @@ const RestaurantSelectionPage = () => {
     navigate('/owner/dashboard');
   };
 
+  const handleManageRestaurants = () => {
+    navigate('/owner/restaurants');
+  };
+
   const QuickStats = () => (
     <div className="dashboard-card">
       <h2 className="card-title">Business Overview</h2>
@@ -115,6 +119,12 @@ const RestaurantSelectionPage = () => {
           <h1 className="page-title">Welcome back, {owner?.first_name}!</h1>
           <p className="page-subtitle">Select a restaurant to manage or view overall performance</p>
         </div>
+        {restaurants.length > 0 && (
+          <button className="manage-btn" onClick={handleManageRestaurants}>
+            <Building size={16} />
+            Manage All Restaurants
+          </button>
+        )}
       </div>
 
       <QuickStats />

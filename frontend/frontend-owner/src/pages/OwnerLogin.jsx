@@ -1,10 +1,11 @@
+// pages/OwnerLogin.jsx
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ownerLogin, clearError, socialLogin } from '../store/slices/authSlice';
 import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { initFacebookSDK, loginWithFacebook } from '../utils/facebookAuth';
 import { setLoginError } from '../store/slices/authSlice';
+import { useSocialAuth } from '../hooks/useSocialAuth';
 import './styles/OwnerLogin.css';
 
 const OwnerLogin = () => {
@@ -15,84 +16,49 @@ const OwnerLogin = () => {
   
   const [isFocused, setIsFocused] = useState({ username: false, password: false });
   const [isHovered, setIsHovered] = useState(false);
-  const [socialLoading, setSocialLoading] = useState({ google: false, facebook: false });
   
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loginLoading, loginError, csrfError } = useSelector(state => state.auth);
+  
+  const {
+    loading: socialLoading,
+    isInitialized,
+    errors: socialErrors, // This is the errors from useSocialAuth hook
+    handleGoogleLogin,
+    handleAppleLogin,
+    handleGoogleError,
+    clearProviderError
+  } = useSocialAuth();
 
   useEffect(() => {
-    
-    // Initialize Facebook SDK when component mounts
-    initFacebookSDK();
-  }, [csrfError, dispatch]);
+    // Clear errors when component unmounts
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
 
-  // Complete Google Login Handler
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      setSocialLoading(prev => ({ ...prev, google: true }));
-      dispatch(clearError());
+      const result = await handleGoogleLogin(credentialResponse);
       
-      if (!credentialResponse.credential) {
-        throw new Error('No credential received from Google');
-      }
-
-      const result = await dispatch(socialLogin({
-        provider: 'google',
-        token: credentialResponse.credential
-      }));
-      
-      if (result.type === 'auth/socialLogin/fulfilled') {
+      if (result.success) {
         handleSocialLoginSuccess(result.payload);
-      } else if (result.type === 'auth/socialLogin/rejected') {
-        throw new Error(result.payload?.error || 'Google login failed');
       }
     } catch (error) {
       console.error('Google login error:', error);
-      dispatch(setLoginError({ 
-        error: error.message || 'Google authentication failed. Please try again.' 
-      }));
-    } finally {
-      setSocialLoading(prev => ({ ...prev, google: false }));
     }
   };
 
-  const handleGoogleError = () => {
-    console.error('Google login failed');
-    dispatch(setLoginError({ 
-      error: 'Google authentication failed. Please try again.' 
-    }));
-  };
-
-  // Complete Facebook Login Handler
-  const handleFacebookLogin = async () => {
+  const handleAppleSignIn = async () => {
     try {
-      setSocialLoading(prev => ({ ...prev, facebook: true }));
-      dispatch(clearError());
-
-      const facebookData = await loginWithFacebook();
+      const result = await handleAppleLogin();
       
-      if (!facebookData.accessToken) {
-        throw new Error('No access token received from Facebook');
-      }
-
-      const result = await dispatch(socialLogin({
-        provider: 'facebook',
-        token: facebookData.accessToken
-      }));
-      
-      if (result.type === 'auth/socialLogin/fulfilled') {
+      if (result.success) {
         handleSocialLoginSuccess(result.payload);
-      } else if (result.type === 'auth/socialLogin/rejected') {
-        throw new Error(result.payload?.error || 'Facebook login failed');
       }
     } catch (error) {
-      console.error('Facebook login error:', error);
-      dispatch(setLoginError({ 
-        error: error.message || 'Facebook authentication failed. Please try again.' 
-      }));
-    } finally {
-      setSocialLoading(prev => ({ ...prev, facebook: false }));
+      console.error('Apple login error:', error);
     }
   };
 
@@ -151,7 +117,6 @@ const OwnerLogin = () => {
       console.error('Login error:', error);
     }
   };
-
 
   const handleChange = (e) => {
     setCredentials({
@@ -325,7 +290,8 @@ const OwnerLogin = () => {
                   Create owner account
                 </Link>
               </p>
-              {/* Social Login Section */}
+              
+              {/* Social Login Section - UPDATED */}
               <div className="social-login-section">
                 <div className="divider">
                   <span>Or continue with</span>
@@ -333,41 +299,80 @@ const OwnerLogin = () => {
                 
                 <div className="social-buttons">
                   {/* Google Login */}
-                  <div className="google-login-wrapper">
-                    <GoogleLogin
-                      onSuccess={handleGoogleSuccess}
-                      onError={handleGoogleError}
-                      shape="rectangular"
-                      size="large"
-                      // width="100%"
-                      text="signin_with"
-                      theme="filled_blue"
-                      useOneTap={false}
-                    />
-                  </div>
+                  {isInitialized.google && (
+                    <div className="google-login-wrapper">
+                      <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={handleGoogleError}
+                        shape="rectangular"
+                        size="large"
+                        text="signin_with"
+                        theme="filled_blue"
+                        useOneTap={false}
+                      />
+                      {socialLoading.google && (
+                        <div className="social-loading-overlay">
+                          <div className="button-spinner"></div>
+                          <span>Connecting...</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
-                  {/* Facebook Login */}
-                  <button 
-                    type="button"
-                    onClick={handleFacebookLogin}
-                    disabled={socialLoading.facebook || loginLoading}
-                    className="social-button facebook"
-                  >
-                    {socialLoading.facebook ? (
-                      <>
-                        <div className="button-spinner"></div>
-                        Connecting...
-                      </>
-                    ) : (
-                      <>
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="#1877F2">
-                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                        </svg>
-                        Facebook
-                      </>
-                    )}
-                  </button>
+                  {/* Apple Login */}
+                  {isInitialized.apple ? (
+                    <button 
+                      type="button"
+                      onClick={handleAppleSignIn}
+                      disabled={socialLoading.apple || loginLoading}
+                      className="social-button apple"
+                    >
+                      {socialLoading.apple ? (
+                        <>
+                          <div className="button-spinner"></div>
+                          Connecting...
+                        </>
+                      ) : (
+                        <>
+                          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                          </svg>
+                          Apple
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    // Show why Apple login is not available (for debugging)
+                    process.env.NODE_ENV === 'development' && (
+                      <div style={{ 
+                        padding: '8px', 
+                        background: 'rgba(255,0,0,0.1)', 
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        color: '#ff6b6b',
+                        textAlign: 'center'
+                      }}>
+                        Apple login disabled: {socialErrors.apple || 'Not configured'}
+                      </div>
+                    )
+                  )}
                 </div>
+
+                {/* Debug info in development */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div style={{ 
+                    marginTop: '10px', 
+                    padding: '8px', 
+                    background: 'rgba(0,0,0,0.3)', 
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    color: '#ccc'
+                  }}>
+                    <div>Google: {isInitialized.google ? '✅' : '❌'} {socialErrors.google || ''}</div>
+                    <div>Apple: {isInitialized.apple ? '✅' : '❌'} {socialErrors.apple || ''}</div>
+                    <div>Apple Script: {typeof window !== 'undefined' && window.AppleID ? '✅ Loaded' : '❌ Missing'}</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

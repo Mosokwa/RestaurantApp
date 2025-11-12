@@ -7,6 +7,7 @@ import { initializeCSRF, loadUserFromToken } from './store/slices/authSlice';
 import OwnerLogin from './pages/OwnerLogin';
 import DashboardOverview from './pages/DashboardOverview';
 import RestaurantSelectionPage from './pages/RestaurantSelectionPage';
+import RestaurantsManagementPage from './pages/RestaurantsManagementPage';
 import OwnerRegister from './pages/OwnerRegister';
 import TwoFactorAuth from './components/verification/TwoFactorAuth';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -315,7 +316,7 @@ const AppContent = () => {
 
               <Route 
                 path="restaurants" 
-                element={<RestaurantSelectionRoute />} 
+                element={<RestaurantsManagementPage />} 
               />
               
               {/* Orders */}
