@@ -150,10 +150,13 @@ class OwnerRegisterView(APIView):
                 # Create user but mark as inactive until email verification
                 user = serializer.save()
                 
-                # Set user as inactive until email verification (CRITICAL FIX)
-                user.is_active = False
-                user.email_verified = False
-                user.save()
+                # Store pending restaurant name if provided
+                restaurant_name = request.data.get('restaurant_name')
+                if restaurant_name and restaurant_name.strip():
+                    # Store in user profile or separate model for pending restaurants
+                    user.pending_restaurant_name = restaurant_name.strip()
+                    user.save(update_fields=['pending_restaurant_name'])
+                    logger.info(f"Pending restaurant stored for {user.email}: {restaurant_name}")
                 
                 # Use your existing email_utils to send verification email
                 email_sent = send_verification_email(user)
@@ -172,7 +175,8 @@ class OwnerRegisterView(APIView):
                     'email_verified': user.email_verified,
                     'is_active': user.is_active,
                     'requires_verification': True,
-                    'email_sent': email_sent
+                    'email_sent': email_sent,
+                    'has_pending_restaurant': bool(restaurant_name and restaurant_name.strip())
                 }, status=status.HTTP_201_CREATED)
                 
             except Exception as e:

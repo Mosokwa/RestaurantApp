@@ -282,6 +282,7 @@ class Branch(models.Model):
         on_delete=models.CASCADE, 
         related_name='branches'
     )
+    name = models.CharField(max_length=255, default='Main Branch')
     address = models.OneToOneField('api.Address', on_delete=models.CASCADE)
     phone_number = models.CharField(
         max_length=20,
@@ -301,7 +302,7 @@ class Branch(models.Model):
         verbose_name_plural = 'branches'
 
     def __str__(self):
-        return f"{self.restaurant.name} - {self.address.city}"
+        return f"{self.restaurant.name} - {self.name} - {self.address.city}"
 
     def is_open_now(self):
         """Check if branch is currently open"""

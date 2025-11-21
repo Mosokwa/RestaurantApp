@@ -1,6 +1,7 @@
 from rest_framework import generics, permissions, filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import ValidationError
 from ..models import Cuisine, Restaurant, MenuCategory, MenuItem, SpecialOffer
@@ -123,6 +124,7 @@ class MenuCategoryCreateView(generics.CreateAPIView):
         # Users can only manage categories for their own restaurants
         return MenuCategory.objects.filter(restaurant__owner=self.request.user)
     
+    @transaction.atomic
     def perform_create(self, serializer):
         # Verify the restaurant belongs to the user
         restaurant_id = self.request.data.get('restaurant')
@@ -141,6 +143,7 @@ class MenuItemCreateView(generics.CreateAPIView):
         # Users can only manage items for their own restaurants
         return MenuItem.objects.filter(category__restaurant__owner=self.request.user)
     
+    @transaction.atomic
     def perform_create(self, serializer):
         # Verify the category belongs to user's restaurant
         category_id = self.request.data.get('category')

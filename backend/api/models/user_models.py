@@ -31,6 +31,12 @@ class User(AbstractUser):
 
     # Owner-specific fields
     is_restaurant_owner = models.BooleanField(default=False)
+    pending_restaurant_name = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True,
+        help_text="Restaurant name provided during registration for pending setup"
+    )
     owned_restaurants = models.ManyToManyField(
         'api.Restaurant', 
         through='RestaurantOwnership',

@@ -38,6 +38,12 @@ class OwnerRegisterSerializer(serializers.ModelSerializer):
             raise ValidationError("A user with this email already exists.")
         return value.lower()
     
+    def validate_restaurant_name(self, value):
+        """Validate restaurant name but don't create restaurant"""
+        if value and len(value.strip()) < 2:
+            raise ValidationError("Restaurant name must be at least 2 characters long.")
+        return value.strip() if value else value
+    
     @transaction.atomic
     def create(self, validated_data):
         # Remove confirmation field and restaurant name
@@ -45,25 +51,14 @@ class OwnerRegisterSerializer(serializers.ModelSerializer):
         restaurant_name = validated_data.pop('restaurant_name', None)
         password = validated_data.pop('password')
         
-        # Create user with owner type
+        # Create user with owner type - mark as inactive until verification
         validated_data['user_type'] = 'owner'
+        validated_data['is_active'] = False  # Critical: user inactive until email verification
+        validated_data['email_verified'] = False
+        
         user = User(**validated_data)
         user.set_password(password)
         user.save()
-        
-        # Create initial restaurant if name provided
-        if restaurant_name:
-            restaurant = Restaurant.objects.create(
-                owner=user,
-                name=restaurant_name,
-                status='pending'
-            )
-            # Set ownership relationship
-            RestaurantOwnership.objects.create(
-                user=user,
-                restaurant=restaurant,
-                is_primary_owner=True
-            )
         
         return user
 

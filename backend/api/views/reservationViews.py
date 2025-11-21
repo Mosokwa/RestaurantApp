@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.views import APIView
 from django.utils import timezone
+from django.db import transaction
 from django.db.models import Q
 from datetime import timedelta, datetime
 from django.shortcuts import get_object_or_404
@@ -187,23 +188,38 @@ class ReservationViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
+    @transaction.atomic
     def perform_create(self, serializer):
         customer = self.request.user.customer_profile
         data = serializer.validated_data
         
-        # Auto-assign table if enabled
+        # Auto-assign table with lock to prevent race conditions
         table = None
         if data['restaurant'].auto_assign_tables:
-            table = ReservationService.auto_assign_table(
-                data['restaurant'], data['branch'], data['reservation_date'],
-                data['reservation_time'], data.get('duration_minutes', 90),
-                data['party_size']
+            # Use select_for_update() to lock the table during assignment
+            available_tables = Table.objects.select_for_update().filter(
+                branch=data['branch'],
+                is_available=True,
+                capacity__gte=data['party_size'],
+                min_party_size__lte=data['party_size']
             )
+            
+            # Find first available table that's not reserved for the time slot
+            for table in available_tables:
+                if table.is_available_for_reservation(
+                    data['reservation_date'], 
+                    data['reservation_time'], 
+                    data.get('duration_minutes', 90)
+                ):
+                    table = table
+                    break
+            else:
+                table = None
         
         if not table:
             raise ValueError("No suitable table available for the reservation")
         
-        # Create reservation
+        # Create reservation within the same transaction
         reservation = serializer.save(
             customer=customer,
             table=table,
@@ -233,6 +249,7 @@ class ReservationViewSet(viewsets.ModelViewSet):
             )
     
     @action(detail=True, methods=['post'])
+    @transaction.atomic
     def confirm(self, request, pk=None):
         """Confirm a pending reservation (for restaurant owners)"""
         reservation = self.get_object()

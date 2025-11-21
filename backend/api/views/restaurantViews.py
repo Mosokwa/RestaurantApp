@@ -1,3 +1,5 @@
+import json
+from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework import status, generics, permissions, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -7,9 +9,9 @@ from django.core.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
 from api.search_utils import SearchUtils
-from ..models import RestaurantPerformanceMetrics, Cuisine, Restaurant, Branch, MenuCategory
+from ..models import RestaurantPerformanceMetrics, Cuisine, Restaurant, Branch, MenuCategory, ItemModifierGroup, MenuItemModifier
 from ..serializers import (
-    RestaurantSerializer, BranchSerializer, RestaurantCreateSerializer, BranchCreateSerializer, MenuCategorySerializer, MenuItemSerializer, RestaurantSearchSerializer
+    RestaurantSerializer, BranchSerializer, RestaurantCreateSerializer, BranchCreateSerializer, MenuCategorySerializer, MenuItemSerializer, RestaurantSearchSerializer, SpecialOfferSerializer
 )
 
 #improved version of list views 
@@ -147,6 +149,7 @@ class RestaurantUpdateView(generics.UpdateAPIView):
         # Users can only update their own restaurants
         return Restaurant.objects.filter(owner=self.request.user)
 
+    @transaction.atomic
     def perform_update(self, serializer):
         instance = self.get_object()
         if instance.owner != self.request.user:
@@ -160,7 +163,7 @@ class RestaurantUpdateView(generics.UpdateAPIView):
                 try:
                     cuisines_data = [int(id.strip()) for id in cuisines_data.split(',')]
                 except ValueError:
-                    raise serializers.ValidationError("Invalid cuisine IDs format")
+                    raise ValidationError("Invalid cuisine IDs format")
             
             # Validate cuisine IDs exist
             valid_cuisine_ids = Cuisine.objects.filter(
@@ -168,7 +171,7 @@ class RestaurantUpdateView(generics.UpdateAPIView):
             ).values_list('cuisine_id', flat=True)
             
             if len(valid_cuisine_ids) != len(cuisines_data):
-                raise serializers.ValidationError("One or more cuisine IDs are invalid")
+                raise ValidationError("One or more cuisine IDs are invalid")
             
             instance.cuisines.set(valid_cuisine_ids)
 
@@ -194,89 +197,228 @@ class RestaurantDeleteView(generics.DestroyAPIView):
 # =============================================================================
 
 class RestaurantOnboardingView(APIView):
+    """
+    Comprehensive restaurant onboarding with proper file upload support
+    """
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, JSONParser]
     
     @transaction.atomic
     def post(self, request):
         try:
             data = request.data
+            user = request.user
+            
+            print("📨 Received onboarding request from:", user.email)
+            
+            # Validate user can create restaurants
+            if user.user_type != 'owner':
+                return Response(
+                    {'error': 'Only restaurant owners can create restaurants'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Parse JSON data from FormData
+            data_str = data.get('data')
+            if not data_str:
+                return Response(
+                    {'error': 'No data provided'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                json_data = json.loads(data_str)
+                print("📝 Parsed JSON data successfully")
+            except json.JSONDecodeError as e:
+                return Response(
+                    {'error': f'Invalid JSON data: {str(e)}'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Check for duplicate restaurant
+            restaurant_name = json_data.get('restaurant', {}).get('name', '').strip()
+            if restaurant_name:
+                existing_restaurant = Restaurant.objects.filter(
+                    owner=user, 
+                    name__iexact=restaurant_name,
+                    status='active'
+                ).first()
+                
+                if existing_restaurant:
+                    return Response(
+                        {'error': f'You already have a restaurant named "{restaurant_name}"'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
             
             # 1. Create Restaurant
+            restaurant_data = json_data.get('restaurant', {})
+            print("🏢 Processing restaurant:", restaurant_data.get('name'))
+            
+            # Add files to restaurant data
+            restaurant_logo = request.FILES.get('restaurant_logo')
+            restaurant_banner = request.FILES.get('restaurant_banner')
+            
+            if restaurant_logo:
+                restaurant_data['logo'] = restaurant_logo
+                print("📸 Added restaurant logo")
+            if restaurant_banner:
+                restaurant_data['banner_image'] = restaurant_banner
+                print("📸 Added restaurant banner")
+            
             restaurant_serializer = RestaurantCreateSerializer(
-                data=data.get('restaurant'),
+                data=restaurant_data,
                 context={'request': request}
             )
+            
             if not restaurant_serializer.is_valid():
+                print("❌ Restaurant validation errors:", restaurant_serializer.errors)
                 return Response(
                     {'error': 'Invalid restaurant data', 'details': restaurant_serializer.errors},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
             restaurant = restaurant_serializer.save()
+            print("✅ Restaurant created:", restaurant.restaurant_id, restaurant.name)
             
-            # 2. Create Branch
-            branch_data = data.get('branch', {})
-            branch_data['restaurant'] = restaurant.restaurant_id
+            # 2. Add Cuisines
+            cuisine_ids = json_data.get('cuisines', [])
+            print("🍽️ Adding cuisines:", cuisine_ids)
             
-            branch_serializer = BranchCreateSerializer(
-                data=branch_data,
-                context={'request': request}
-            )
-            if not branch_serializer.is_valid():
+            for cuisine_id in cuisine_ids:
+                try:
+                    cuisine = Cuisine.objects.get(cuisine_id=cuisine_id, is_active=True)
+                    restaurant.cuisines.add(cuisine)
+                    print(f"✅ Added cuisine: {cuisine.name}")
+                except Cuisine.DoesNotExist:
+                    print(f"⚠️ Invalid cuisine ID: {cuisine_id}")
+            
+            # 3. Create Branches
+            branches_data = json_data.get('branches', [])
+            created_branches = []
+            
+            print("📍 Creating branches:", len(branches_data))
+            
+            for branch_index, branch_data in enumerate(branches_data):
+                branch_data['restaurant'] = restaurant.restaurant_id
+                branch_serializer = BranchCreateSerializer(
+                    data=branch_data,
+                    context={'request': request}
+                )
+                
+                if not branch_serializer.is_valid():
+                    print(f"❌ Branch {branch_index} errors:", branch_serializer.errors)
+                    return Response(
+                        {'error': f'Invalid branch data: {branch_serializer.errors}'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                branch = branch_serializer.save()
+                created_branches.append({
+                    'branch_id': branch.branch_id,
+                    'name': branch.name,
+                    'address': str(branch.address)
+                })
+                print(f"✅ Branch created: {branch.name}")
+            
+            # Ensure at least one branch was created
+            if not created_branches:
                 return Response(
-                    {'error': 'Invalid branch data', 'details': branch_serializer.errors},
+                    {'error': 'At least one branch is required'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            branch = branch_serializer.save()
-            
-            # 3. Add Cuisines
-            cuisine_ids = data.get('cuisines', [])
-            for cuisine_id in cuisine_ids:
-                try:
-                    cuisine = Cuisine.objects.get(cuisine_id=cuisine_id)
-                    restaurant.cuisines.add(cuisine)
-                except Cuisine.DoesNotExist:
-                    continue
-            
-            # 4. Create Menu Categories and Items
-            menu_data = data.get('menu', {})
+            # 4. Create Menu Structure
+            menu_data = json_data.get('menu', {})
             categories_data = menu_data.get('categories', [])
-            items_data = menu_data.get('items', [])
+            created_menu_structure = {
+                'categories': [],
+                'items': 0
+            }
             
-            # Create categories
-            for category_data in categories_data:
+            print("📋 Creating menu categories:", len(categories_data))
+            
+            # Create categories and items
+            for category_index, category_data in enumerate(categories_data):
                 category_data['restaurant'] = restaurant.restaurant_id
                 category_serializer = MenuCategorySerializer(data=category_data)
-                if category_serializer.is_valid():
-                    category_serializer.save()
-            
-            # Create menu items
-            for item_data in items_data:
-                # Ensure category exists for this restaurant
-                category_id = item_data.get('category')
-                try:
-                    category = MenuCategory.objects.get(
-                        category_id=category_id,
-                        restaurant=restaurant
+                
+                if not category_serializer.is_valid():
+                    print(f"❌ Category {category_index} errors:", category_serializer.errors)
+                    return Response(
+                        {'error': f'Invalid category data: {category_serializer.errors}'},
+                        status=status.HTTP_400_BAD_REQUEST
                     )
+                
+                category = category_serializer.save()
+                category_info = {
+                    'category_id': category.category_id,
+                    'name': category.name,
+                    'items': []
+                }
+                
+                # Create menu items for this category
+                items_data = category_data.get('items', [])
+                for item_index, item_data in enumerate(items_data):
                     item_data['category'] = category.category_id
+                    
+                    # Add menu item image if available
+                    menu_item_image = request.FILES.get(f'menu_item_images[{category_index}][{item_index}]')
+                    if menu_item_image:
+                        item_data['image'] = menu_item_image
+                        print(f"📸 Added image for menu item: {item_data.get('name')}")
+                    
                     item_serializer = MenuItemSerializer(data=item_data)
-                    if item_serializer.is_valid():
-                        item_serializer.save()
-                except MenuCategory.DoesNotExist:
-                    continue
+                    
+                    if not item_serializer.is_valid():
+                        print(f"❌ Menu item {item_index} errors:", item_serializer.errors)
+                        return Response(
+                            {'error': f'Invalid menu item data: {item_serializer.errors}'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                    
+                    menu_item = item_serializer.save()
+                    created_menu_structure['items'] += 1
+                    
+                    category_info['items'].append({
+                        'item_id': menu_item.item_id,
+                        'name': menu_item.name,
+                        'price': str(menu_item.price)
+                    })
+                    print(f"✅ Menu item created: {menu_item.name} - ${menu_item.price}")
+                
+                created_menu_structure['categories'].append(category_info)
             
-            # 5. Create initial performance metrics
-            RestaurantPerformanceMetrics.objects.create(restaurant=restaurant)
+            # 5. Create performance metrics safely
+            try:
+                metrics, created = RestaurantPerformanceMetrics.objects.get_or_create(
+                    restaurant=restaurant
+                )
+                if created:
+                    print("✅ Created new performance metrics")
+                else:
+                    print("ℹ️ Performance metrics already exist")
+            except Exception as e:
+                print(f"⚠️ Performance metrics issue: {str(e)}")
+                # Continue anyway - metrics are not critical for onboarding
+            
+            print("🎉 Onboarding completed successfully!")
+            print(f"📊 Summary: {len(created_branches)} branches, {len(created_menu_structure['categories'])} categories, {created_menu_structure['items']} items")
             
             return Response({
                 'message': 'Restaurant onboarding completed successfully',
                 'restaurant_id': restaurant.restaurant_id,
-                'branch_id': branch.branch_id
+                'is_first_restaurant': json_data.get('is_first_restaurant', False),
+                'branches_created': len(created_branches),
+                'menu_categories_created': len(created_menu_structure['categories']),
+                'menu_items_created': created_menu_structure['items'],
+                'cuisines_added': restaurant.cuisines.count(),
             }, status=status.HTTP_201_CREATED)
             
         except Exception as e:
+            print("💥 Onboarding failed with exception:", str(e))
+            import traceback
+            traceback.print_exc()
+            
             return Response(
                 {'error': f'Onboarding failed: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -313,6 +455,7 @@ class BranchCreateView(generics.CreateAPIView):
     serializer_class = BranchCreateSerializer
     permission_classes = [IsAuthenticated]  # ← Only authenticated users can create
 
+    @transaction.atomic
     def perform_create(self, serializer):
         # Get restaurant from context or validate the provided one
         restaurant_id = self.request.data.get('restaurant')
@@ -341,6 +484,7 @@ class BranchUpdateView(generics.UpdateAPIView):
         # Users can only update branches of their own restaurants
         return Branch.objects.filter(restaurant__owner=self.request.user)
 
+    @transaction.atomic
     def perform_update(self, serializer):
         instance = self.get_object()
         if instance.restaurant.owner != self.request.user:

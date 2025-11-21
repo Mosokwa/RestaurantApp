@@ -98,6 +98,7 @@ class ItemModifierListView(generics.ListCreateAPIView):
         
         return queryset
 
+    @transaction.atomic
     def perform_create(self, serializer):
         modifier_group_id = self.request.data.get('modifier_group')
         
@@ -181,6 +182,7 @@ class MenuItemModifierListView(generics.ListCreateAPIView):
         
         return queryset
 
+    @transaction.atomic
     def perform_create(self, serializer):
         menu_item_id = self.request.data.get('menu_item')
         modifier_group_id = self.request.data.get('modifier_group')
@@ -271,6 +273,7 @@ class BulkMenuItemModifiersView(APIView):
     """View to bulk assign/remove modifier groups from menu items"""
     permission_classes = [IsAuthenticated]
     
+    @transaction.atomic
     def post(self, request):
         menu_item_id = request.data.get('menu_item_id')
         modifier_group_ids = request.data.get('modifier_group_ids', [])

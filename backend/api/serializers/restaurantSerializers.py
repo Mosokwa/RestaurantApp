@@ -100,7 +100,7 @@ class BranchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Branch
         fields = [
-            'branch_id', 'restaurant', 'restaurant_name', 'address', 'full_address',
+            'branch_id', 'restaurant', 'restaurant_name', 'name', 'address', 'full_address',
             'phone_number', 'operating_hours', 'is_active', 'is_main_branch',
             'is_open', 'created_at', 'updated_at'
         ]
@@ -126,7 +126,7 @@ class RestaurantCreateSerializer(serializers.ModelSerializer):
         model = Restaurant
         fields = [
             'restaurant_id','name', 'description', 'cuisines', 'phone_number', 'email',
-            'website', 'status', 'is_featured'
+            'website', 'status', 'is_featured', 'logo', 'banner_image'
         ]
         read_only_fields = ('restaurant_id',)
         extra_kwargs = {
@@ -154,7 +154,7 @@ class BranchCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Branch
         fields = [
-            'restaurant', 'address_data', 'phone_number', 'operating_hours',
+            'name','restaurant', 'address_data', 'phone_number', 'operating_hours',
             'is_active', 'is_main_branch'
         ]
     
