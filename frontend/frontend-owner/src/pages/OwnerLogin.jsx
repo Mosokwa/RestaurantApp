@@ -320,7 +320,7 @@ const OwnerLogin = () => {
                   )}
                   
                   {/* Apple Login */}
-                  {isInitialized.apple ? (
+                  {isInitialized.apple && (
                     <button 
                       type="button"
                       onClick={handleAppleSignIn}
@@ -341,38 +341,8 @@ const OwnerLogin = () => {
                         </>
                       )}
                     </button>
-                  ) : (
-                    // Show why Apple login is not available (for debugging)
-                    process.env.NODE_ENV === 'development' && (
-                      <div style={{ 
-                        padding: '8px', 
-                        background: 'rgba(255,0,0,0.1)', 
-                        borderRadius: '8px',
-                        fontSize: '12px',
-                        color: '#ff6b6b',
-                        textAlign: 'center'
-                      }}>
-                        Apple login disabled: {socialErrors.apple || 'Not configured'}
-                      </div>
-                    )
                   )}
                 </div>
-
-                {/* Debug info in development */}
-                {process.env.NODE_ENV === 'development' && (
-                  <div style={{ 
-                    marginTop: '10px', 
-                    padding: '8px', 
-                    background: 'rgba(0,0,0,0.3)', 
-                    borderRadius: '8px',
-                    fontSize: '11px',
-                    color: '#ccc'
-                  }}>
-                    <div>Google: {isInitialized.google ? '✅' : '❌'} {socialErrors.google || ''}</div>
-                    <div>Apple: {isInitialized.apple ? '✅' : '❌'} {socialErrors.apple || ''}</div>
-                    <div>Apple Script: {typeof window !== 'undefined' && window.AppleID ? '✅ Loaded' : '❌ Missing'}</div>
-                  </div>
-                )}
               </div>
             </div>
           </div>

@@ -56,6 +56,17 @@ const OwnerSidebar = ({ isOpen, onToggle, isMobile }) => {
 
   const pendingOrdersCount = getPendingOrdersCount();
 
+  const handleAddRestaurant = () => {
+    console.log('➕ Add New Restaurant clicked');
+    
+    // Set the pending restaurant flag to allow onboarding access
+    localStorage.setItem('pendingRestaurantSetup', 'true');
+    localStorage.removeItem('pendingRestaurantData'); // Clear any old data
+    
+    // Navigate to onboarding
+    navigate('/owner/onboarding');
+  };
+
   // Menu items when NO restaurant is selected
   const noRestaurantMenuItems = useMemo(() => [
     { 
@@ -74,7 +85,8 @@ const OwnerSidebar = ({ isOpen, onToggle, isMobile }) => {
       id: 'create-restaurant', 
       label: 'Add New Restaurant', 
       icon: Plus,
-      path: '/owner/restaurants/new'
+      onClick: handleAddRestaurant,
+      isAction: true
     },
     { 
       id: 'business-analytics', 
@@ -259,12 +271,21 @@ const OwnerSidebar = ({ isOpen, onToggle, isMobile }) => {
     const active = isActive(item);
     const hasChildren = item.children && item.children.length > 0;
     const expanded = isExpanded(item.id);
+    const isActionItem = item.isAction;
 
     return (
       <div key={item.id}>
         <button
-          onClick={() => handleMenuClick(item)}
-          className={`menu-item ${active ? 'active' : ''} ${level > 0 ? 'nested' : ''}`}
+          onClick={() => {
+            if (isActionItem && item.onClick) {
+              item.onClick(); // Handle action items
+            } else if (item.path) {
+              handleNavigation(item.path); // Handle navigation items
+            } else if (hasChildren) {
+              toggleDropdown(item.id); // Handle dropdown items
+            }
+          }}
+          className={`menu-item ${active ? 'active' : ''} ${level > 0 ? 'nested' : ''} ${isActionItem ? 'action-item' : ''}`}
         >
           <div className="menu-item-content">
             {Icon && <Icon className="menu-icon" size={18} />}
@@ -370,7 +391,7 @@ const OwnerSidebar = ({ isOpen, onToggle, isMobile }) => {
             {!currentRestaurant && restaurants.length === 0 && (
               <button 
                 className="quick-action-btn"
-                onClick={() => navigate('/owner/restaurants/new')}
+                onClick={handleAddRestaurant}
               >
                 <Plus size={16} />
                 Create Your First Restaurant

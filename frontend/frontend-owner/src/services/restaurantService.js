@@ -18,6 +18,32 @@ export const restaurantService = {
     return handleServiceResponse(response);
   },
 
+  createRestaurantOnboarding: async (onboardingData) => {
+    try {
+      console.log('🔄 Making API call to /restaurants/onboarding/');
+      
+      const response = await api.post('/restaurants/onboarding/', onboardingData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 30000, // 30 second timeout for large uploads
+      });
+      
+      console.log('✅ API call successful:', response.status);
+      return handleServiceResponse(response);
+    } catch (error) {
+      console.error('❌ API call failed with status:', error.response?.status);
+      console.error('Error response data:', error.response?.data);
+      throw error;
+    }
+  },
+
+
+  checkUserRestaurants: async () => {
+    const response = await api.get('/restaurants/my/');
+    return handleServiceResponse(response);
+  },
+
   // Staff management
   getStaff: async (restaurantId) => {
     const response = await api.get(`/staff/?restaurant=${restaurantId}`);

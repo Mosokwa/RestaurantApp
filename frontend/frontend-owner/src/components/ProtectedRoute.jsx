@@ -1,76 +1,74 @@
-// components/ProtectedRoute.jsx
+// components/ProtectedRoute.jsx - Clean version
 import { useSelector } from 'react-redux';
 import { Navigate, useLocation } from 'react-router-dom';
-import { hasPermission } from '../utils/permissions';
 
 const ProtectedRoute = ({ 
   children, 
-  requiredPermission, 
-  restaurantId,
   ownerOnly = false,
-  requireEmailVerified = true,
-  allowUnverified = false 
+  requireEmailVerified = true
 }) => {
-  const { isAuthenticated, user, loading } = useSelector(state => state.auth);
+  const { isAuthenticated, user, loading, hasPendingRestaurant } = useSelector(state => state.auth);
+  const { restaurants } = useSelector(state => state.ownerAuth);
   const location = useLocation();
 
-  // Show loading while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Checking authentication...</p>
+          <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
     );
   }
 
-  const hasPendingVerification = localStorage.getItem('pendingVerificationEmail');
+  // Check if this is onboarding page
+  const isOnboardingPage = location.pathname.includes('/onboarding');
+  
+  // Get onboarding access requirements
+  const userHasRestaurants = restaurants && restaurants.length > 0;
+  const hasPendingRestaurantSetup = localStorage.getItem('pendingRestaurantSetup') === 'true';
 
-  console.log('🔐 ProtectedRoute Analysis:', {
+  console.log('🔐 ProtectedRoute Check:', {
     path: location.pathname,
-    isAuthenticated,
-    userEmail: user?.email,
-    emailVerified: user?.email_verified,
-    isLoginPage: location.pathname === '/login'
+    isOnboardingPage,
+    userHasRestaurants,
+    hasPendingRestaurantSetup,
+    isAuthenticated
   });
 
-  if (isAuthenticated && user?.email_verified && location.pathname === '/login') {
-    console.log('🔄 ProtectedRoute: Redirecting authenticated user from login to dashboard');
-    return <Navigate to="/owner/dashboard" replace />;
+  // ONBOARDING ACCESS CONTROL - FIXED LOGIC
+  if (isOnboardingPage) {
+    // Allow onboarding ONLY in these specific scenarios:
+    const canAccessOnboarding = 
+      isAuthenticated && 
+      user?.email_verified && 
+      // Either has pending setup OR has no restaurants (first time)
+      (hasPendingRestaurantSetup || !userHasRestaurants);
+
+    if (!canAccessOnboarding) {
+      console.log('🚫 Onboarding access denied - redirecting to dashboard');
+      return <Navigate to="/owner/dashboard" replace />;
+    }
+    
+    console.log('✅ Onboarding access granted');
+    return children;
   }
 
-  // Redirect to login if not authenticated AND no pending verification
-  if (!isAuthenticated && !hasPendingVerification) {
+
+  // STANDARD AUTH FOR ALL OTHER ROUTES
+  if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Handle pending verification redirect
-  if (!isAuthenticated && hasPendingVerification && !location.pathname.includes('/verify-email')) {
-    return <Navigate to="/verify-email" replace />;
-  }
-
-  // For authenticated users, check email verification
-  if (isAuthenticated && requireEmailVerified && !user?.email_verified) {
-    const allowedWithoutVerification = [
-      '/verify-email',
-      '/logout',
-      '/settings'
-    ].some(path => location.pathname.includes(path));
-
-    if (!allowedWithoutVerification && !allowUnverified) {
+  if (requireEmailVerified && !user.email_verified) {
+    const allowedWithoutVerification = ['/verify-email', '/logout', '/settings'];
+    if (!allowedWithoutVerification.some(path => location.pathname.includes(path))) {
       return <Navigate to="/verify-email" state={{ from: location }} replace />;
     }
   }
 
-  // Owner-only route protection
-  if (isAuthenticated && ownerOnly && user.user_type !== 'owner') {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
-  // Permission-based route protection
-  if (isAuthenticated && requiredPermission && !hasPermission(user, requiredPermission, restaurantId)) {
+  if (ownerOnly && user.user_type !== 'owner') {
     return <Navigate to="/unauthorized" replace />;
   }
 

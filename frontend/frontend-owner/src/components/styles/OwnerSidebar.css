@@ -202,6 +202,20 @@
   gap: 0.5rem; 
 }
 
+.menu-item.action-item {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.menu-item.action-item:hover {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.menu-item.action-item .menu-icon {
+  color: #22c55e;
+}
+
 .badge {
   background: linear-gradient(135deg, var(--color-accent), #C0392B);
   color: white;

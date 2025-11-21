@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Building, TrendingUp, Users, DollarSign, Clock, ChevronRight } from 'lucide-react';
@@ -8,6 +9,18 @@ const RestaurantSelectionPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { owner, restaurants } = useSelector(state => state.ownerAuth);
+
+  useEffect(() => {
+    if (restaurants && restaurants.length > 0) {
+      const hasPendingFlag = localStorage.getItem('pendingRestaurantSetup') === 'true';
+      if (hasPendingFlag) {
+        console.log('🧹 Cleaning up pending flag in restaurant selection');
+        localStorage.removeItem('pendingRestaurantSetup');
+        localStorage.removeItem('pendingRestaurantData');
+      }
+    }
+  }, [restaurants]);
+
   
   // Mock data for restaurant comparisons (you'll replace with real API data)
   const restaurantStats = {
@@ -18,9 +31,21 @@ const RestaurantSelectionPage = () => {
   };
 
   const handleRestaurantSelect = (restaurantId) => {
-    dispatch(switchRestaurant(restaurantId));
+  console.log('🎯 Restaurant selected:', restaurantId);
+  dispatch(switchRestaurant(restaurantId));
+  
+  // Use setTimeout to ensure Redux state is updated before navigation
+  setTimeout(() => {
     navigate('/owner/dashboard');
-  };
+  }, 100);
+};
+
+const handleAddNewRestaurant = () => {
+  console.log('➕ Add New Restaurant from selection page');
+  // Clear any existing pending data
+  localStorage.setItem('pendingRestaurantSetup', 'true');
+  navigate('/owner/onboarding');
+};
 
   const handleManageRestaurants = () => {
     navigate('/owner/restaurants');
@@ -145,7 +170,7 @@ const RestaurantSelectionPage = () => {
               <Building size={48} className="no-restaurants-icon" />
               <h3>No Restaurants Found</h3>
               <p>You haven't added any restaurants yet.</p>
-              <button className="add-restaurant-btn">
+              <button className="add-restaurant-btn" onClick={handleAddNewRestaurant}>
                 Add Your First Restaurant
               </button>
             </div>

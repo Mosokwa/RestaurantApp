@@ -694,13 +694,6 @@
   color: #ff4757 !important;
 }
 
-.field-error {
-  color: #ff4757;
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-  padding-left: 0.5rem;
-}
-
 .button-disabled {
   opacity: 0.6 !important;
   cursor: not-allowed !important;
@@ -906,4 +899,18 @@
   .security-badge {
     border-width: 2px;
   }
+}
+
+.field-error {
+  color: #ff6b6b;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.input-error {
+  border-color: #ff6b6b !important;
+  background: rgba(255, 107, 107, 0.05) !important;
 }

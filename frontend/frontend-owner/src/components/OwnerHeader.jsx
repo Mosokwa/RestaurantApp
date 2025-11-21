@@ -17,10 +17,42 @@ const OwnerHeader = ({ onToggleSidebar }) => {
   // Extract restaurants from possible paginated response
   const restaurantsList = Array.isArray(restaurants) ? restaurants : [];
 
+  useEffect(() => {
+    console.log('🔍 OwnerHeader - Restaurants data:', {
+      restaurantsRaw: restaurants,
+      restaurantsList: restaurantsList,
+      currentRestaurant: currentRestaurant,
+      restaurantIds: restaurantsList.map(r => r.restaurant_id)
+    });
+  }, [restaurants, currentRestaurant]);
+
   const handleRestaurantSwitch = (restaurantId) => {
-    if (restaurantId) {
-      dispatch(switchRestaurant(restaurantId));
-      // Stay on the current page, just refresh the data
+    if (restaurantId && restaurantId !== currentRestaurant?.restaurant_id) {
+      console.log('🔄 Switching to restaurant:', restaurantId);
+      
+      // Find the restaurant in the current restaurants list
+      const targetRestaurant = restaurantsList.find(
+        restaurant => restaurant.restaurant_id == restaurantId
+      );
+      
+      if (targetRestaurant) {
+        console.log('✅ Found restaurant:', targetRestaurant.name);
+        
+        // Dispatch the synchronous action
+        dispatch(switchRestaurant(restaurantId));
+        
+        // Navigate to dashboard to refresh the view
+        setTimeout(() => {
+          navigate('/owner/dashboard', { replace: true });
+        }, 100);
+        
+      } else {
+        console.error('❌ Restaurant not found in current list. Available restaurants:', 
+          restaurantsList.map(r => ({ id: r.restaurant_id, name: r.name }))
+        );
+      }
+    } else {
+      console.log('⚠️ Same restaurant selected or invalid ID');
     }
   };
 
@@ -50,10 +82,8 @@ const OwnerHeader = ({ onToggleSidebar }) => {
   const handleLogout = async () => {
     console.log('🔄 Logout function called!');
     
-    // Immediately close user menu
     setShowUserMenu(false);
     
-    // Cancel all pending API calls immediately
     if (authService.cancelAllRequests) {
       authService.cancelAllRequests();
     }
@@ -61,17 +91,19 @@ const OwnerHeader = ({ onToggleSidebar }) => {
     try {
       await authService.logout();
       dispatch(logoutOwner());
+      
+      // Clear all persisted UI state
+      localStorage.removeItem('sidebarOpen');
+      localStorage.removeItem('currentRestaurant');
+      
       console.log('✅ Logout successful!');
-
       window.location.href = '/login';
-
     } catch (error) {
       console.error('Logout error:', error);
       // Still clear state and redirect
       dispatch(logoutOwner());
-      if (authService.clearTokens) {
-        authService.clearTokens();
-      }
+      localStorage.removeItem('sidebarOpen');
+      localStorage.removeItem('currentRestaurant');
       
       window.location.href = '/login';
     }

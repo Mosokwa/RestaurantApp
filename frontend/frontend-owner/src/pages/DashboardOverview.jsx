@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   ShoppingCart,
@@ -38,6 +38,8 @@ const DashboardOverview = () => {
     if (!isAuthenticated || !currentRestaurant?.restaurant_id) {
       return;
     }
+
+    console.log('🔄 Refreshing dashboard data for:', currentRestaurant.name);
 
     dispatch(fetchDashboardData(currentRestaurant.restaurant_id))
       .unwrap()

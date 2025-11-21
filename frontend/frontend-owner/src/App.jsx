@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocat
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import store from './store';
-import { initializeCSRF, loadUserFromToken } from './store/slices/authSlice';
+import { initializeCSRF, loadUserFromToken, completeOnboarding } from './store/slices/authSlice';
 import OwnerLogin from './pages/OwnerLogin';
 import DashboardOverview from './pages/DashboardOverview';
 import RestaurantSelectionPage from './pages/RestaurantSelectionPage';
@@ -16,6 +16,7 @@ import OwnerLayout from './components/OwnerLayout';
 import VerifyEmailRoute from './components/verification/VerifyEmailRoute';
 import ComponentErrorBoundary from './components/ComponentErrorBoundary';
 import PublicRoute from './components/PublicRoute';
+import RestaurantOnboarding from './components/onboarding/RestaurantOnboarding';
 
 // Placeholder components for demonstration
 const OrdersPage = () => <div className="p-6">Orders Management Page</div>;
@@ -39,95 +40,68 @@ const LoyaltyPage = () => <div className="p-6">Loyalty Program Page</div>;
 const CommunicationsPage = () => <div className="p-6">Customer Communications Page</div>;
 
 
-const useRouteDebug = () => {
-  const location = useLocation();
-  const auth = useSelector(state => state.auth);
-  
-  useEffect(() => {
-    console.log('🔍 ROUTE DEBUG:', {
-      path: location.pathname,
-      isAuthenticated: auth.isAuthenticated,
-      userEmail: auth.user?.email,
-      emailVerified: auth.user?.email_verified,
-      pendingVerification: localStorage.getItem('pendingVerificationEmail'),
-      requires2FA: auth.requires2FA
-    });
-  }, [location.pathname, auth]);
-};
-
 // Auto Redirect Handler
 const AutoRedirectHandler = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, requires2FA, loading } = useSelector(state => state.auth);
-  const [initialCheckComplete, setInitialCheckComplete] = useState(false);
-
-  useRouteDebug(); // Enable debugging
 
   useEffect(() => {
-    // Don't run redirects while still loading
-    if (loading || !initialCheckComplete) {
+    if (loading) return;
+
+    const currentPath = location.pathname;
+    const pendingEmail = localStorage.getItem('pendingVerificationEmail');
+    const isAuthPage = currentPath === '/login' || currentPath === '/register';
+
+    console.log('🔄 AutoRedirect Check:', {
+      currentPath,
+      isAuthenticated,
+      isAuthPage
+    });
+
+    // UNAUTHENTICATED USER: Only handle email verification
+    if (!isAuthenticated) {
+      if (pendingEmail && !currentPath.includes('/verify-email')) {
+        navigate('/verify-email', { replace: true });
+      }
       return;
     }
 
-    // Don't redirect if we're already on the correct page
-    const currentPath = location.pathname;
-    const pendingEmail = localStorage.getItem('pendingVerificationEmail');
+    // AUTHENTICATED USER: Only handle critical redirects
+    if (isAuthenticated && user) {
+      // Handle unverified email
+      if (!user.email_verified && !currentPath.includes('/verify-email') && !currentPath.includes('/logout')) {
+        navigate('/verify-email', { replace: true });
+        return;
+      }
 
-    console.log('🔄 AutoRedirectHandler Analysis:', {
-      currentPath,
-      isAuthenticated,
-      userEmail: user?.email,
-      emailVerified: user?.email_verified,
-      requires2FA,
-      shouldRedirect: isAuthenticated && user?.email_verified && currentPath === '/login'
-    });
+      // Handle 2FA
+      if (requires2FA && !currentPath.includes('/2fa')) {
+        navigate('/2fa', { replace: true });
+        return;
+      }
 
-    // CASE 1: Authenticated & verified user on login/verify pages
-    if (isAuthenticated && user?.email_verified) {
-      if (currentPath === '/login' || currentPath === '/verify-email') {
-        console.log('✅ Redirecting verified user to dashboard');
+      // ONLY redirect from auth pages to dashboard
+      if (user.email_verified && isAuthPage) {
         navigate('/owner/dashboard', { replace: true });
         return;
       }
     }
-
-    // CASE 2: Handle 2FA requirement
-    if (requires2FA && !currentPath.includes('/2fa')) {
-      navigate('/2fa', { replace: true });
-      return;
-    }
-
-    // CASE 3: Handle pending verification for unauthenticated users
-    if (!isAuthenticated && pendingEmail && !currentPath.includes('/verify-email')) {
-      navigate('/verify-email', { replace: true });
-      return;
-    }
-
-    // CASE 4: Handle authenticated but unverified users accessing protected routes
-    if (isAuthenticated && user && !user.email_verified && currentPath.includes('/owner')) {
-      navigate('/verify-email', { replace: true });
-      return;
-    }
-
-  }, [navigate, location.pathname, isAuthenticated, user, requires2FA, loading, initialCheckComplete]);
-
-  // Mark initial check as complete after first load
-  useEffect(() => {
-    if (!loading && !initialCheckComplete) {
-      setInitialCheckComplete(true);
-    }
-  }, [loading, initialCheckComplete]);
+  }, [navigate, location.pathname, isAuthenticated, user, requires2FA, loading]);
 
   return children;
 };
 
-// Dashboard Route Component - FIXED
+
+// Fixed DashboardRoute 
 const DashboardRoute = () => {
   const { user } = useSelector(state => state.auth);
-  const { currentRestaurant } = useSelector(state => state.ownerAuth);
+  const { currentRestaurant, restaurants, loading: restaurantsLoading } = useSelector(state => state.ownerAuth);
   
-  // Add safety check for user object
+  const hasPendingRestaurantSetup = localStorage.getItem('pendingRestaurantSetup') === 'true';
+  const userHasNoRestaurants = !restaurants || restaurants.length === 0;
+
+  // Safety check for user object
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -139,33 +113,41 @@ const DashboardRoute = () => {
     );
   }
 
-  if (!currentRestaurant || !user.email_verified) {
+  // Show loading while restaurants are being fetched
+  if (restaurantsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your restaurants...</p>
+        </div>
+      </div>
+    );
+  }
+
+  console.log('🏠 DashboardRoute State:', {
+    hasPendingRestaurant: hasPendingRestaurantSetup,
+    restaurantsCount: restaurants?.length,
+    hasCurrentRestaurant: !!currentRestaurant,
+    userEmail: user.email
+  });
+
+  // ONLY redirect to onboarding if user has no restaurants AND has pending setup
+  if (userHasNoRestaurants && hasPendingRestaurantSetup) {
+    console.log('🔄 Redirecting to onboarding - new user with pending setup');
+    return <Navigate to="/owner/onboarding" replace />;
+  }
+
+  // CRITICAL: If user has restaurants but no current restaurant selected, show selection
+  // This ensures user always explicitly selects a restaurant first
+  if (!currentRestaurant && !userHasNoRestaurants) {
+    console.log('📋 Showing restaurant selection - no restaurant selected');
     return <RestaurantSelectionPage />;
   }
 
-  // Now we can safely check user.email_verified
+  // User has restaurants and one is selected - show dashboard
+  console.log('✅ Rendering dashboard for:', currentRestaurant?.name);
   return <DashboardOverview />;
-};
-
-const RestaurantSelectionRoute = () => {
-  const { user } = useSelector(state => state.auth);
-  
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading user data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return user.email_verified ? (
-    <RestaurantSelectionPage />
-  ) : (
-    <Navigate to="/verify-email" replace />
-  );
 };
 
 // Add this hook to App.jsx
@@ -174,16 +156,31 @@ const useLocalStorageValidation = () => {
     const validateLocalStorage = () => {
       try {
         const token = localStorage.getItem('token');
-        // Basic token validation (JWT should have 3 parts)
-        if (token && token.split('.').length !== 3) {
+        
+        // If no token, clear all user-related data
+        if (!token) {
+          localStorage.removeItem('currentRestaurant');
+          localStorage.removeItem('pendingRestaurantSetup');
+          localStorage.removeItem('pendingRestaurantData');
+          localStorage.removeItem('sidebarOpen');
+          return;
+        }
+        
+        // Validate token format
+        if (token.split('.').length !== 3) {
           console.warn('Invalid token format, clearing...');
           localStorage.removeItem('token');
           localStorage.removeItem('refreshToken');
+          localStorage.removeItem('currentRestaurant');
+          localStorage.removeItem('sidebarOpen');
         }
+        
       } catch (error) {
         console.error('LocalStorage validation error:', error);
-        // If localStorage is corrupted, clear it
-        localStorage.clear();
+        // Clear only problematic items, keep others
+        localStorage.removeItem('currentRestaurant');
+        localStorage.removeItem('pendingRestaurantSetup');
+        localStorage.removeItem('pendingRestaurantData');
       }
     };
 
@@ -215,6 +212,7 @@ const AppContent = () => {
   useLocalStorageValidation();
   const dispatch = useDispatch();
   const { csrfInitialized, loading, isAuthenticated, user } = useSelector(state => state.auth);
+  const { restaurants } = useSelector(state => state.ownerAuth);
   const [appInitialized, setAppInitialized] = useState(false);
 
 
@@ -251,6 +249,19 @@ const AppContent = () => {
     
     initializeAppSafely();
   }, [dispatch, appInitialized]);
+
+  useEffect(() => {
+    if (isAuthenticated && restaurants && restaurants.length > 0) {
+      const hasPendingFlag = localStorage.getItem('pendingRestaurantSetup') === 'true';
+      if (hasPendingFlag) {
+        console.log('🧹 Cleaning up stale pending restaurant flag - user has restaurants');
+        localStorage.removeItem('pendingRestaurantSetup');
+        localStorage.removeItem('pendingRestaurantData');
+        dispatch(completeOnboarding());
+      }
+    }
+  }, [isAuthenticated, restaurants, dispatch]);
+
 
 
   if (!appInitialized || (csrfInitialized === false && loading)) {
@@ -308,6 +319,10 @@ const AppContent = () => {
                 </ProtectedRoute>
               }
             >
+              <Route 
+                path="onboarding" 
+                element={<RestaurantOnboarding />} 
+              />
               {/* Dashboard */}
               <Route 
                 path="dashboard" 

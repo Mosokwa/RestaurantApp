@@ -11,9 +11,7 @@ const OwnerLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const dispatch = useDispatch();
-  // const { owner, currentRestaurant } = useSelector(state => state.ownerAuth);
   const { isAuthenticated } = useSelector(state => state.auth);
-
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -25,7 +23,9 @@ const OwnerLayout = () => {
       if (window.innerWidth <= 768) {
         setSidebarOpen(false);
       } else {
-        setSidebarOpen(true);
+        // Restore sidebar state from localStorage
+        const savedSidebarState = localStorage.getItem('sidebarOpen');
+        setSidebarOpen(savedSidebarState ? JSON.parse(savedSidebarState) : true);
       }
     };
 
@@ -36,7 +36,10 @@ const OwnerLayout = () => {
   }, [dispatch, isAuthenticated]);
 
   const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
+    const newState = !sidebarOpen;
+    setSidebarOpen(newState);
+    // Persist sidebar state
+    localStorage.setItem('sidebarOpen', JSON.stringify(newState));
   };
 
   const closeSidebar = () => {

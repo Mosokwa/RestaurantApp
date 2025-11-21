@@ -18,8 +18,10 @@ const RestaurantsManagementPage = () => {
     navigate(`/owner/restaurants/${restaurantId}/edit`);
   };
 
-  const handleCreateNew = () => {
-    navigate('/owner/restaurants/new');
+  const handleAddNewRestaurant = () => {
+    // Clear any existing pending data
+    localStorage.setItem('pendingRestaurantSetup', 'true');
+    navigate('/owner/onboarding');
   };
 
   return (
@@ -29,7 +31,7 @@ const RestaurantsManagementPage = () => {
           <h1 className="page-title">My Restaurants</h1>
           <p className="page-subtitle">Manage all your restaurant locations and settings</p>
         </div>
-        <button className="create-btn" onClick={handleCreateNew}>
+        <button className="create-btn" onClick={handleAddNewRestaurant}>
           <Plus size={20} />
           Add New Restaurant
         </button>
@@ -81,7 +83,7 @@ const RestaurantsManagementPage = () => {
             <Building size={48} className="no-restaurants-icon" />
             <h3>No Restaurants Yet</h3>
             <p>Get started by adding your first restaurant location</p>
-            <button className="create-btn large" onClick={handleCreateNew}>
+            <button className="create-btn large" onClick={handleAddNewRestaurant}>
               <Plus size={20} />
               Create Your First Restaurant
             </button>

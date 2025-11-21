@@ -3,7 +3,57 @@ import { useDispatch, useSelector } from 'react-redux';
 import { ownerRegister, clearError, setRegisterError } from '../store/slices/authSlice';
 import { useNavigate, Link } from 'react-router-dom';
 import './styles/OwnerLogin.css';
-import { get } from 'jquery';
+
+
+const PasswordStrengthIndicator = ({ password }) => {
+  const getStrength = (pwd) => {
+    let strength = 0;
+    if (pwd.length >= 8) strength++;
+    if (/[a-z]/.test(pwd)) strength++;
+    if (/[A-Z]/.test(pwd)) strength++;
+    if (/[0-9]/.test(pwd)) strength++;
+    return strength;
+  };
+
+  const strength = getStrength(password);
+  const strengthText = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'][strength];
+  const strengthColor = ['#ff4d4f', '#ff7a45', '#faad14', '#52c41a', '#389e0d'][strength];
+
+  if (!password) return null;
+
+  return (
+    <div className="password-strength" style={{ marginTop: '0.5rem' }}>
+      <div style={{ 
+        display: 'flex', 
+        gap: '4px', 
+        marginBottom: '4px' 
+      }}>
+        {[1, 2, 3, 4].map((index) => (
+          <div
+            key={index}
+            style={{
+              flex: 1,
+              height: '4px',
+              backgroundColor: index <= strength ? strengthColor : '#f0f0f0',
+              borderRadius: '2px',
+              transition: 'all 0.3s ease'
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ 
+        fontSize: '0.75rem', 
+        color: strengthColor,
+        fontWeight: '500'
+      }}>
+        Password strength: {strengthText}
+      </div>
+      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', marginTop: '0.25rem' }}>
+        Must contain: 8+ characters, uppercase, lowercase, number
+      </div>
+    </div>
+  );
+};
 
 
 // Production-ready validation utility
@@ -26,10 +76,23 @@ const validateFormData = (data) => {
 
   // Password strength validation
   if (data.password) {
+    const passwordErrors = [];
+    
     if (data.password.length < 8) {
-      errors.password = 'Password must be at least 8 characters long';
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(data.password)) {
-      errors.password = 'Password must contain uppercase, lowercase letters and numbers';
+      passwordErrors.push('at least 8 characters long');
+    }
+    if (!/(?=.*[a-z])/.test(data.password)) {
+      passwordErrors.push('one lowercase letter');
+    }
+    if (!/(?=.*[A-Z])/.test(data.password)) {
+      passwordErrors.push('one uppercase letter');
+    }
+    if (!/(?=.*\d)/.test(data.password)) {
+      passwordErrors.push('one number');
+    }
+    
+    if (passwordErrors.length > 0) {
+      errors.password = `Password must contain ${passwordErrors.join(', ')}`;
     }
   }
 
@@ -55,7 +118,7 @@ const validateFormData = (data) => {
 
 // Data transformation utility
 const transformToBackendFormat = (frontendData) => {
-  return {
+  const backendData = {
     username: frontendData.username?.trim(),
     email: frontendData.email?.trim().toLowerCase(),
     password: frontendData.password,
@@ -63,10 +126,16 @@ const transformToBackendFormat = (frontendData) => {
     first_name: frontendData.firstName?.trim(),
     last_name: frontendData.lastName?.trim(),
     phone_number: frontendData.phoneNumber?.trim() || '',
-    restaurant_name: frontendData.restaurantName?.trim() || ''
   };
+  
+  // Include restaurant_name but the backend will ignore it for restaurant creation
+  if (frontendData.restaurantName?.trim()) {
+    backendData.restaurant_name = frontendData.restaurantName.trim();
+  }
+  
+  console.log('📤 Final registration payload:', backendData);
+  return backendData;
 };
-
 
 const OwnerRegister = () => {
   const [formData, setFormData] = useState({
@@ -124,94 +193,150 @@ const OwnerRegister = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // Clear previous errors
-    dispatch(clearError());
-    setFieldErrors({});
+  e.preventDefault();
+  
+  // Clear previous errors
+  dispatch(clearError());
+  setFieldErrors({});
 
-    // Comprehensive form validation
-    const errors = validateFormData(formData);
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      setTouched(Object.keys(errors).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
+  console.log('🔍 Starting form validation...');
+
+  // Comprehensive form validation
+  const errors = validateFormData(formData);
+  console.log('🔍 Form validation errors:', errors);
+  
+  if (Object.keys(errors).length > 0) {
+    setFieldErrors(errors);
+    setTouched(Object.keys(errors).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
+    
+    // Scroll to first error
+    const firstErrorField = Object.keys(errors)[0];
+    const element = document.querySelector(`[name="${firstErrorField}"]`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.focus();
+    }
+    
+    dispatch(setRegisterError({ 
+      error: 'Please fix the validation errors below.' 
+    }));
+    return;
+  }
+
+  try {
+    console.log('🚀 Starting registration process...');
+
+    // Transform data to match backend expectations
+    const backendFormData = transformToBackendFormat(formData);
+    
+    console.log('📤 Dispatching ownerRegister action...');
+    
+    const result = await dispatch(ownerRegister(backendFormData));
+    
+    console.log('📥 Registration action result:', result);
+    
+    if (result.type === 'auth/ownerRegister/fulfilled') {
+      console.log('✅ Registration successful!');
       
-      // Scroll to first error
-      const firstErrorField = Object.keys(errors)[0];
-      const element = document.querySelector(`[name="${firstErrorField}"]`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        element.focus();
+      // Set pending restaurant setup flags
+      if (formData.restaurantName && formData.restaurantName.trim()) {
+        const pendingRestaurantData = {
+          name: formData.restaurantName.trim(),
+          timestamp: new Date().toISOString(),
+          isFirstRestaurant: true
+        };
+        
+        localStorage.setItem('pendingRestaurantData', JSON.stringify(pendingRestaurantData));
+        localStorage.setItem('pendingRestaurantSetup', 'true');
+        console.log('💾 Stored pending restaurant data:', pendingRestaurantData);
       }
       
-      dispatch(setRegisterError({ 
-        error: 'Please fix the validation errors below.' 
-      }));
-      return;
-    }
+      // Registration successful - redirect to email verification
+      localStorage.setItem('pendingVerificationEmail', formData.email);
+      localStorage.setItem('pendingUserType', 'owner');
 
-    try {
-      console.log('🚀 Starting registration process...');
-
-      // Transform data to match backend expectations
-      const backendFormData = transformToBackendFormat(formData);
+      navigate('/verify-email', { 
+        state: { 
+          email: formData.email,
+          message: 'Registration successful! Please verify your email to activate your account.',
+          hasPendingRestaurant: !!formData.restaurantName
+        }
+      });
       
-      const result = await dispatch(ownerRegister(backendFormData));
+    } else if (result.type === 'auth/ownerRegister/rejected') {
+      console.error('❌ Registration rejected:', result);
       
-      if (result.type === 'auth/ownerRegister/fulfilled') {
-        // Registration successful - redirect to email verification
-        localStorage.setItem('pendingVerificationEmail', formData.email);
-        localStorage.setItem('pendingUserType', 'owner');
-
-        navigate('/verify-email', { 
-          state: { 
-            email: formData.email,
-            message: 'Registration successful! Please verify your email to activate your account.',
+      // Handle backend validation errors
+      const errorPayload = result.payload;
+      console.error('❌ Error payload:', errorPayload);
+      
+      if (errorPayload?.error?.includes('CSRF')) {
+        // Retry with fresh CSRF token
+        console.warn('🔄 CSRF error detected, refreshing token...');
+        dispatch(setRegisterError({ 
+          error: 'Security token issue. Please try again.' 
+        }));
+      } else if (typeof errorPayload === 'object') {
+        // Handle field-specific errors from backend - FIXED THIS PART
+        const backendErrors = {};
+        
+        // Handle different error formats from backend
+        if (errorPayload.password) {
+          // Handle password field errors
+          if (Array.isArray(errorPayload.password)) {
+            backendErrors.password = errorPayload.password[0];
+          } else if (typeof errorPayload.password === 'string') {
+            backendErrors.password = errorPayload.password;
+          }
+        }
+        
+        // Handle other field errors
+        Object.keys(errorPayload).forEach(key => {
+          if (key !== 'error' && key !== 'detail') {
+            if (errorPayload[key] && Array.isArray(errorPayload[key])) {
+              backendErrors[key] = errorPayload[key][0];
+            } else if (typeof errorPayload[key] === 'string') {
+              backendErrors[key] = errorPayload[key];
+            }
           }
         });
         
-      } else if (result.type === 'auth/ownerRegister/rejected') {
-        // Handle backend validation errors
-        const errorPayload = result.payload;
+        console.log('🔍 Backend errors processed:', backendErrors);
         
-        if (errorPayload?.error?.includes('CSRF')) {
-          // Retry with fresh CSRF token
-          console.warn('🔄 CSRF error detected, refreshing token...');
-          dispatch(setRegisterError({ 
-            error: 'Security token issue. Please try again.' 
-          }));
-        } else if (typeof errorPayload === 'object') {
-          // Handle field-specific errors from backend
-          const backendErrors = {};
-          Object.keys(errorPayload).forEach(key => {
-            if (errorPayload[key] && Array.isArray(errorPayload[key])) {
-              backendErrors[key] = errorPayload[key][0];
-            }
-          });
+        if (Object.keys(backendErrors).length > 0) {
+          setFieldErrors(backendErrors);
+          setTouched(Object.keys(backendErrors).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
           
-          if (Object.keys(backendErrors).length > 0) {
-            setFieldErrors(backendErrors);
-            dispatch(setRegisterError({ 
-              error: 'Please fix the validation errors below.' 
-            }));
-          } else {
-            dispatch(setRegisterError({ 
-              error: errorPayload.error || errorPayload.detail  || 'Registration failed. Please try again.' 
-            }));
+          // Scroll to first error
+          const firstErrorField = Object.keys(backendErrors)[0];
+          const element = document.querySelector(`[name="${firstErrorField}"]`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.focus();
           }
-        } else {
+          
           dispatch(setRegisterError({ 
-            error: 'Registration failed. Please try again.' 
+            error: 'Please fix the validation errors below.' 
+          }));
+        } else {
+          // Fallback to generic error
+          dispatch(setRegisterError({ 
+            error: errorPayload.error || errorPayload.detail || 'Registration failed. Please try again.' 
           }));
         }
+      } else {
+        dispatch(setRegisterError({ 
+          error: 'Registration failed. Please try again.' 
+        }));
       }
-    } catch (error) {
-      console.error('Unexpected registration error:', error);
-      dispatch(setRegisterError({ 
-        error: 'An unexpected error occurred. Please try again later.' 
-      }));
     }
-  };
+  } catch (error) {
+    console.error('💥 Unexpected registration error:', error);
+    dispatch(setRegisterError({ 
+      error: 'An unexpected error occurred. Please try again later.' 
+    }));
+  }
+};
 
   // Helper to check if field should show error
   const shouldShowError = (fieldName) => {
@@ -480,6 +605,20 @@ const OwnerRegister = () => {
                       </svg>
                     </div>
                   </div>
+                  <PasswordStrengthIndicator password={formData.password} />
+                  {shouldShowError('password') && (
+                    <div className="field-error" style={{ 
+                      color: '#ff6b6b', 
+                      fontSize: '0.75rem', 
+                      marginTop: '0.25rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem'
+                    }}>
+                      <span>⚠️</span>
+                      {fieldErrors.password}
+                    </div>
+                  )}
                 </div>
 
                 <div className="input-group">

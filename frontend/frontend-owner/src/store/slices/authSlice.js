@@ -71,8 +71,12 @@ export const ownerRegister = createAsyncThunk(
   async (ownerData, { rejectWithValue }) => {
     try {
       const response = await authService.ownerRegister(ownerData);
+      
+      // Simple: Set pending restaurant flag
+      localStorage.setItem('pendingRestaurantSetup', 'true');
       localStorage.setItem('pendingVerificationEmail', ownerData.email);
       localStorage.setItem('pendingUserType', 'owner');
+      
       return response;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -389,7 +393,30 @@ const authSlice = createSlice({
           state.loginLoading = false;
           state.loginError = action.payload;
         });
-    }
+    },
+
+    setPendingRestaurant: (state, action) => {
+      state.hasPendingRestaurant = action.payload;
+      if (action.payload) {
+        localStorage.setItem('pendingRestaurantSetup', 'true');
+      } else {
+        localStorage.removeItem('pendingRestaurantSetup');
+      }
+    },
+    
+    completeOnboarding: (state) => {
+      state.hasPendingRestaurant = false;
+      state.hasCompletedOnboarding = true;
+      localStorage.removeItem('pendingRestaurantSetup');
+      localStorage.removeItem('pendingRestaurantData');
+      localStorage.removeItem('pendingRestaurantSetup');
+    },
+    
+    clearOnboardingState: (state) => {
+      state.hasPendingRestaurant = false;
+      localStorage.removeItem('pendingRestaurantSetup');
+      localStorage.removeItem('pendingRestaurantData');
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -615,7 +642,10 @@ export const {
   set2FARequired,
   clear2FA,
   setEmailVerified,
-  debugAuthState
+  debugAuthState,
+  setPendingRestaurant,
+  completeOnboarding,
+  clearOnboardingState
 } = authSlice.actions;
 
 export default authSlice.reducer;
