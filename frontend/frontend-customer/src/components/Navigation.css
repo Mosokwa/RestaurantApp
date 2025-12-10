@@ -60,48 +60,9 @@
   color: #e63946;
 }
 
-/* Desktop Navigation Links */
+/* Hide desktop nav links */
 .nav-links {
   display: none;
-  align-items: center;
-  gap: 2rem;
-}
-
-@media (min-width: 768px) {
-  .nav-links {
-    display: flex;
-  }
-}
-
-.navigation.scrolled .nav-links .nav-link{
-    color: #333;
-}
-.nav-link {
-  text-decoration: none;
-  color: whitesmoke;
-  font-weight: 500;
-  font-size: 0.95rem;
-  transition: color 0.3s ease;
-  position: relative;
-}
-
-.nav-link:hover {
-  color: #e63946;
-}
-
-.nav-link::after {
-  content: '';
-  position: absolute;
-  bottom: -5px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: #e63946;
-  transition: width 0.3s ease;
-}
-
-.nav-link:hover::after {
-  width: 100%;
 }
 
 /* Right Side Icons */
@@ -132,6 +93,10 @@
   color: #e63946;
 }
 
+.navigation.home-page:not(.scrolled) .nav-icon {
+  color: white;
+}
+
 .cart-icon {
   position: relative;
 }
@@ -159,10 +124,48 @@
   object-fit: cover;
 }
 
-.logout-btn {
-  background: none;
-  border: none;
-  font-size: 1.1rem;
+/* Desktop auth links */
+.desktop-auth-links {
+  display: none;
+  align-items: center;
+  gap: 1rem;
+  margin-left: 1rem;
+}
+
+@media (min-width: 768px) {
+  .desktop-auth-links {
+    display: flex;
+  }
+}
+
+.desktop-auth-links .nav-link {
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: color 0.3s ease;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+}
+
+.navigation.home-page:not(.scrolled) .desktop-auth-links .nav-link {
+  color: white;
+}
+
+.desktop-auth-links .nav-link:hover {
+  color: #e63946;
+}
+
+.desktop-auth-links .signup-btn {
+  background: #e63946;
+  color: white !important;
+  border-radius: 4px;
+  padding: 0.5rem 1.5rem;
+}
+
+.desktop-auth-links .signup-btn:hover {
+  background: #d32f2f;
+  color: white !important;
 }
 
 /* Mobile Menu Toggle */
@@ -268,7 +271,9 @@
   font-weight: 500;
   padding: 0.5rem 0;
   transition: color 0.3s ease;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .mobile-nav-link:hover {
@@ -303,14 +308,6 @@
 .mobile-auth-link i {
   width: 20px;
   text-align: center;
-}
-
-.logout-btn {
-  color: #dc3545;
-}
-
-.logout-btn:hover {
-  color: #c82333;
 }
 
 /* Overlay for mobile menu */
