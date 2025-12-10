@@ -297,3 +297,51 @@ class CustomerInsightsSerializer(serializers.Serializer):
     average_clv = serializers.DecimalField(max_digits=10, decimal_places=2)
     churn_rate = serializers.DecimalField(max_digits=5, decimal_places=2)
     customer_segments = serializers.JSONField()
+
+class EnhancedMenuPerformanceSerializer(serializers.Serializer):
+    """Serializer for enhanced menu performance analytics"""
+    restaurant_id = serializers.IntegerField()
+    period = serializers.DictField()
+    summary_metrics = serializers.DictField()
+    item_performance = serializers.ListField()
+    category_performance = serializers.ListField()
+    bcg_matrix = serializers.ListField()
+    popularity_trends = serializers.ListField()
+    calculated_at = serializers.DateTimeField()
+
+class CategoryAnalyticsSerializer(serializers.Serializer):
+    """Serializer for category-level analytics"""
+    category_id = serializers.IntegerField()
+    name = serializers.CharField()
+    display_color = serializers.CharField()
+    display_order = serializers.IntegerField()
+    is_active = serializers.BooleanField()
+    total_items = serializers.IntegerField()
+    active_items = serializers.IntegerField()
+    items_sold_30d = serializers.IntegerField()
+    revenue_30d = serializers.DecimalField(max_digits=10, decimal_places=2)
+    items_sold_7d = serializers.IntegerField()
+    avg_rating = serializers.DecimalField(max_digits=3, decimal_places=2, allow_null=True)
+    avg_prep_time = serializers.IntegerField(allow_null=True)
+    previous_period_revenue = serializers.DecimalField(max_digits=10, decimal_places=2)
+    revenue_growth = serializers.DecimalField(max_digits=5, decimal_places=2)
+    performance_score = serializers.IntegerField()
+
+class ItemAnalyticsSerializer(serializers.Serializer):
+    """Serializer for item-level analytics"""
+    item_id = serializers.IntegerField()
+    name = serializers.CharField()
+    category_id = serializers.IntegerField()
+    category_name = serializers.CharField()
+    category_display_color = serializers.CharField()
+    price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    is_available = serializers.BooleanField()
+    quantity_sold = serializers.IntegerField()
+    revenue = serializers.DecimalField(max_digits=10, decimal_places=2)
+    food_cost = serializers.DecimalField(max_digits=10, decimal_places=2)
+    gross_profit = serializers.DecimalField(max_digits=10, decimal_places=2)
+    profit_margin = serializers.DecimalField(max_digits=5, decimal_places=2)
+    avg_rating = serializers.DecimalField(max_digits=3, decimal_places=2, allow_null=True)
+    rating_count = serializers.IntegerField()
+    popularity_score = serializers.IntegerField()
+    preparation_time = serializers.IntegerField()

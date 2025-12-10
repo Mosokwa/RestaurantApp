@@ -3,6 +3,9 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
 from django.forms import DurationField
+import numpy as np
+from django.db.models import Value
+from django.db.models.functions import Coalesce
 from xhtml2pdf import pisa
 import pandas as pd
 from django.http import Http404, HttpResponse
@@ -11,16 +14,16 @@ from rest_framework import status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models.functions import ExtractHour, ExtractWeekDay, TruncDate
-from django.db.models import ExpressionWrapper
+from django.db.models import ExpressionWrapper, Q
 from django.template.loader import render_to_string
 from django.db.models import Avg, Count, Sum, F
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 import calendar
-from ..models import CustomerLifetimeValue, RestaurantPerformanceMetrics, Restaurant, MenuItem, Order, OrderItem,  OrderTracking
+from ..models import CustomerLifetimeValue, RestaurantPerformanceMetrics, Restaurant, MenuItem, Order, OrderItem,  OrderTracking, MenuCategory, PopularitySnapshot
 from ..serializers import (
-    AnalyticsPeriodSerializer, ExportRequestSerializer, RestaurantPerformanceMetricsSerializer, SalesAnalyticsRequestSerializer, SalesTrendSerializer, OrderTrackingSerializer
+    AnalyticsPeriodSerializer, ExportRequestSerializer, RestaurantPerformanceMetricsSerializer, SalesAnalyticsRequestSerializer, SalesTrendSerializer, OrderTrackingSerializer, EnhancedMenuPerformanceSerializer, CategoryAnalyticsSerializer, ItemAnalyticsSerializer
 )
 
 class OrderTrackingView(generics.ListAPIView):
@@ -884,234 +887,6 @@ class CustomerInsightsView(AnalyticsBaseView):
         
         return recommendations
 
-class MenuPerformanceView(AnalyticsBaseView):
-    """
-    Detailed menu performance analytics
-    """
-    
-    def get(self, request, restaurant_id=None):
-        serializer = AnalyticsPeriodSerializer(data=request.query_params)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        data = serializer.validated_data
-        period = data.get('period', 'this_month')
-        start_date, end_date = self._get_date_range(
-            period, data.get('start_date'), data.get('end_date')
-        )
-        
-        restaurants = self._get_restaurant_access(restaurant_id)
-        
-        performance_data = []
-        for restaurant in restaurants:
-            menu_performance = self._get_restaurant_menu_performance(
-                restaurant, start_date, end_date
-            )
-            performance_data.append(menu_performance)
-        
-        return Response({
-            'period': period,
-            'start_date': start_date,
-            'end_date': end_date,
-            'menu_performance': performance_data
-        })
-    
-    def _get_restaurant_menu_performance(self, restaurant, start_date, end_date):
-        """Get comprehensive menu performance analysis"""
-        
-        # Best sellers analysis
-        best_sellers = self._get_best_sellers(restaurant, start_date, end_date)
-        worst_sellers = self._get_worst_sellers(restaurant, start_date, end_date)
-        
-        # Category performance
-        category_performance = self._get_category_performance(restaurant, start_date, end_date)
-        
-        # Profitability analysis
-        profitability_analysis = self._get_profitability_analysis(restaurant, start_date, end_date)
-        
-        # Menu engineering (BCG matrix style)
-        menu_engineering = self._analyze_menu_engineering(restaurant, start_date, end_date)
-        
-        return {
-            'restaurant_id': restaurant.restaurant_id,
-            'restaurant_name': restaurant.name,
-            'period': f"{start_date} to {end_date}",
-            'best_sellers': best_sellers,
-            'worst_sellers': worst_sellers,
-            'category_performance': category_performance,
-            'profitability_analysis': profitability_analysis,
-            'menu_engineering': menu_engineering,
-            'recommendations': self._generate_menu_recommendations(
-                best_sellers, worst_sellers, menu_engineering
-            )
-        }
-    
-    def _get_best_sellers(self, restaurant, start_date, end_date, limit=10):
-        """Get top performing menu items"""
-        best_sellers = OrderItem.objects.filter(
-            order__restaurant=restaurant,
-            order__order_placed_at__date__range=[start_date, end_date],
-            order__status='delivered'
-        ).values(
-            'menu_item_id', 'menu_item__name', 'menu_item__category__name'
-        ).annotate(
-            total_sold=Sum('quantity'),
-            total_revenue=Sum(F('quantity') * F('price_at_time')),
-            avg_rating=Avg('order__rating__rating')
-        ).order_by('-total_sold')[:limit]
-        
-        return [
-            {
-                'menu_item_id': item['menu_item_id'],
-                'name': item['menu_item__name'],
-                'category': item['menu_item__category__name'],
-                'quantity_sold': item['total_sold'] or 0,
-                'revenue': float(item['total_revenue'] or 0),
-                'average_rating': float(item['avg_rating'] or 0)
-            }
-            for item in best_sellers
-        ]
-    
-    def _get_worst_sellers(self, restaurant, start_date, end_date, limit=10):
-        """Get worst performing menu items"""
-        all_items = MenuItem.objects.filter(restaurant=restaurant)
-        sold_items = OrderItem.objects.filter(
-            order__restaurant=restaurant,
-            order__order_placed_at__date__range=[start_date, end_date],
-            order__status='delivered'
-        ).values('menu_item_id').annotate(total_sold=Sum('quantity'))
-        
-        sold_item_ids = {item['menu_item_id']: item['total_sold'] for item in sold_items}
-        
-        worst_items = []
-        for item in all_items:
-            quantity_sold = sold_item_ids.get(item.menu_item_id, 0)
-            if quantity_sold == 0:  # Items that haven't sold at all
-                worst_items.append({
-                    'menu_item_id': item.menu_item_id,
-                    'name': item.name,
-                    'category': item.category.name if item.category else 'Uncategorized',
-                    'quantity_sold': 0,
-                    'revenue': 0.0,
-                    'average_rating': 0.0
-                })
-        
-        return worst_items[:limit]
-    
-    def _get_category_performance(self, restaurant, start_date, end_date):
-        """Analyze performance by menu category"""
-        category_performance = OrderItem.objects.filter(
-            order__restaurant=restaurant,
-            order__order_placed_at__date__range=[start_date, end_date],
-            order__status='delivered'
-        ).values(
-            'menu_item__category_id', 'menu_item__category__name'
-        ).annotate(
-            total_items_sold=Sum('quantity'),
-            total_revenue=Sum(F('quantity') * F('price_at_time')),
-            unique_items=Count('menu_item_id', distinct=True),
-            avg_rating=Avg('order__rating__rating')
-        ).order_by('-total_revenue')
-        
-        return [
-            {
-                'category_id': cat['menu_item__category_id'],
-                'category_name': cat['menu_item__category__name'],
-                'items_sold': cat['total_items_sold'] or 0,
-                'revenue': float(cat['total_revenue'] or 0),
-                'unique_items': cat['unique_items'],
-                'average_rating': float(cat['avg_rating'] or 0)
-            }
-            for cat in category_performance
-        ]
-    
-    def _get_profitability_analysis(self, restaurant, start_date, end_date):
-        """Analyze profitability of menu items (requires cost data)"""
-        # This is a simplified version - in production, integrate with inventory/cost systems
-        menu_items = MenuItem.objects.filter(restaurant=restaurant)
-        
-        profitability_data = []
-        for item in menu_items:
-            # Get sales data
-            sales = OrderItem.objects.filter(
-                menu_item=item,
-                order__order_placed_at__date__range=[start_date, end_date],
-                order__status='delivered'
-            ).aggregate(
-                total_sold=Sum('quantity'),
-                total_revenue=Sum(F('quantity') * F('price_at_time'))
-            )
-            
-            # Estimate costs (placeholder - integrate with actual cost data)
-            estimated_cost_per_item = item.price * Decimal('0.3')  # 30% COGS estimate
-            total_cost = (sales['total_sold'] or 0) * estimated_cost_per_item
-            gross_profit = (sales['total_revenue'] or 0) - total_cost
-            margin = (gross_profit / sales['total_revenue'] * 100) if sales['total_revenue'] else 0
-            
-            profitability_data.append({
-                'menu_item_id': item.menu_item_id,
-                'name': item.name,
-                'quantity_sold': sales['total_sold'] or 0,
-                'revenue': float(sales['total_revenue'] or 0),
-                'estimated_cost': float(total_cost),
-                'gross_profit': float(gross_profit),
-                'margin': float(margin)
-            })
-        
-        return sorted(profitability_data, key=lambda x: x['margin'], reverse=True)
-    
-    def _analyze_menu_engineering(self, restaurant, start_date, end_date):
-        """BCG matrix style analysis of menu items"""
-        all_items = self._get_profitability_analysis(restaurant, start_date, end_date)
-        
-        if not all_items:
-            return []
-        
-        # Calculate averages for segmentation
-        avg_popularity = sum(item['quantity_sold'] for item in all_items) / len(all_items)
-        avg_profitability = sum(item['margin'] for item in all_items) / len(all_items)
-        
-        engineered_menu = []
-        for item in all_items:
-            if item['quantity_sold'] >= avg_popularity and item['margin'] >= avg_profitability:
-                category = 'stars'
-            elif item['quantity_sold'] >= avg_popularity and item['margin'] < avg_profitability:
-                category = 'plow_horses'
-            elif item['quantity_sold'] < avg_popularity and item['margin'] >= avg_profitability:
-                category = 'puzzles'
-            else:
-                category = 'dogs'
-            
-            item['menu_category'] = category
-            engineered_menu.append(item)
-        
-        return engineered_menu
-    
-    def _generate_menu_recommendations(self, best_sellers, worst_sellers, menu_engineering):
-        """Generate menu optimization recommendations"""
-        recommendations = []
-        
-        # Analyze worst sellers for potential removal
-        if len(worst_sellers) > 5:
-            recommendations.append({
-                'type': 'optimization',
-                'priority': 'medium',
-                'message': f'Consider removing or improving {len(worst_sellers)} underperforming items',
-                'action': 'Review recipes, pricing, or marketing for low-performing items'
-            })
-        
-        # Analyze stars for promotion opportunities
-        stars = [item for item in menu_engineering if item.get('menu_category') == 'stars']
-        if stars:
-            recommendations.append({
-                'type': 'promotion',
-                'priority': 'high',
-                'message': f'Promote {len(stars)} high-performing "star" items',
-                'action': 'Feature star items prominently in marketing and menu design'
-            })
-        
-        return recommendations
-
 class OperationalMetricsView(AnalyticsBaseView):
     """
     Operational efficiency and performance metrics
@@ -1802,3 +1577,767 @@ class DashboardMetricsView(AnalyticsBaseView):
         if previous == 0:
             return 100.0 if current > 0 else 0.0
         return round(((current - previous) / previous) * 100, 2)
+    
+# ==================== ENHANCED MENU ANALYTICS VIEWS ====================
+
+class EnhancedMenuPerformanceView(APIView):
+    """
+    Comprehensive menu performance analytics with BCG matrix and profitability analysis
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        restaurant_id = request.GET.get('restaurant_id')
+        days = int(request.GET.get('days', 30))
+        
+        if not restaurant_id:
+            return Response({'error': 'restaurant_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not self._has_restaurant_access(request.user, restaurant_id):
+            return Response({'error': 'Access denied to this restaurant'}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            analytics = self._calculate_comprehensive_analytics(restaurant_id, days)
+            serializer = EnhancedMenuPerformanceSerializer(analytics)
+            return Response({
+                'data': serializer.data,
+                'pagination': None,
+                'status': status.HTTP_200_OK,
+                'success': True
+            })
+        except Exception as e:
+            return Response({
+                'error': f'Analytics calculation failed: {str(e)}',
+                'status': status.HTTP_500_INTERNAL_SERVER_ERROR,
+                'success': False
+            })
+    
+    def _has_restaurant_access(self, user, restaurant_id):
+        """Verify user has access to this restaurant"""
+        if user.user_type == 'owner':
+            return Restaurant.objects.filter(
+                restaurant_id=restaurant_id, 
+                owner=user
+            ).exists()
+        elif user.user_type == 'staff':
+            return Restaurant.objects.filter(
+                restaurant_id=restaurant_id,
+                staff_members__user=user
+            ).exists()
+        elif user.user_type == 'admin':
+            return True
+        return False
+    
+    def _calculate_comprehensive_analytics(self, restaurant_id, days):
+        """Calculate comprehensive menu performance metrics"""
+        from django.db.models import Sum, Avg, Count, F, Q, Value, FloatField
+        from django.db.models.functions import Coalesce
+        from datetime import timedelta
+        
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days)
+        
+        # Get all menu items with their categories
+        menu_items = MenuItem.objects.filter(
+            category__restaurant_id=restaurant_id
+        ).select_related('category').prefetch_related('order_items')
+        
+        # Calculate item performance
+        item_performance = []
+        for item in menu_items:
+            # Get sales data for the period
+            order_items = item.order_items.filter(
+                order__status='delivered',
+                order__order_placed_at__date__range=[start_date, end_date]
+            )
+            
+            quantity_sold = order_items.aggregate(
+                total=Coalesce(Sum('quantity'), Value(0))
+            )['total']
+            
+            revenue = order_items.aggregate(
+                total=Coalesce(Sum(F('quantity') * F('price_at_time')), Value(0.0))
+            )['total']
+            
+            # Calculate profitability (simplified - 30% food cost)
+            food_cost = revenue * 0.3
+            gross_profit = revenue - food_cost
+            profit_margin = (gross_profit / revenue * 100) if revenue > 0 else 0
+            
+            # Get ratings
+            ratings = item.ratings.aggregate(
+                avg_rating=Coalesce(Avg('rating'), Value(0.0)),
+                count=Count('rating_id')
+            )
+            
+            item_performance.append({
+                'item_id': item.item_id,
+                'name': item.name,
+                'category_id': item.category_id,
+                'category_name': item.category.name,
+                'price': float(item.price),
+                'is_available': item.is_available,
+                'quantity_sold': quantity_sold,
+                'revenue': float(revenue),
+                'food_cost': float(food_cost),
+                'gross_profit': float(gross_profit),
+                'profit_margin': round(profit_margin, 2),
+                'avg_rating': float(ratings['avg_rating']),
+                'rating_count': ratings['count'],
+                'popularity_score': item.popularity_score,
+                'preparation_time': item.preparation_time
+            })
+        
+        # Calculate category performance
+        categories = MenuCategory.objects.filter(restaurant_id=restaurant_id)
+        category_performance = []
+        
+        for category in categories:
+            category_items = [item for item in item_performance if item['category_id'] == category.category_id]
+            category_revenue = sum(item['revenue'] for item in category_items)
+            category_items_sold = sum(item['quantity_sold'] for item in category_items)
+            category_profit = sum(item['gross_profit'] for item in category_items)
+            
+            category_performance.append({
+                'category_id': category.category_id,
+                'name': category.name,
+                'display_color': category.display_color,
+                'display_order': category.display_order,
+                'is_active': category.is_active,
+                'total_items': len(category_items),
+                'active_items': len([item for item in category_items if item['is_available']]),
+                'items_sold': category_items_sold,
+                'revenue': category_revenue,
+                'gross_profit': category_profit,
+                'profit_margin': (category_profit / category_revenue * 100) if category_revenue > 0 else 0,
+                'avg_rating': np.mean([item['avg_rating'] for item in category_items]) if category_items else 0
+            })
+        
+        # Calculate BCG Matrix
+        bcg_matrix = self._calculate_bcg_matrix(item_performance)
+        
+        # Calculate popularity trends
+        popularity_trends = self._get_popularity_trends(restaurant_id, days)
+        
+        # Overall summary metrics
+        summary_metrics = self._calculate_summary_metrics(item_performance, category_performance)
+        
+        return {
+            'restaurant_id': restaurant_id,
+            'period': {
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat(),
+                'days': days
+            },
+            'summary_metrics': summary_metrics,
+            'item_performance': item_performance,
+            'category_performance': category_performance,
+            'bcg_matrix': bcg_matrix,
+            'popularity_trends': popularity_trends,
+            'calculated_at': timezone.now().isoformat()
+        }
+    
+    def _calculate_bcg_matrix(self, item_performance):
+        """Calculate BCG matrix classification for menu items"""
+        if not item_performance:
+            return []
+        
+        # Filter out items with no sales
+        active_items = [item for item in item_performance if item['quantity_sold'] > 0]
+        if not active_items:
+            return []
+        
+        # Calculate averages for segmentation
+        avg_popularity = np.mean([item['popularity_score'] for item in active_items])
+        avg_profit_margin = np.mean([item['profit_margin'] for item in active_items])
+        
+        bcg_matrix = []
+        for item in active_items:
+            if item['popularity_score'] >= avg_popularity and item['profit_margin'] >= avg_profit_margin:
+                category = 'stars'
+                recommendation = 'Promote and feature prominently'
+            elif item['popularity_score'] >= avg_popularity and item['profit_margin'] < avg_profit_margin:
+                category = 'plow_horses'
+                recommendation = 'Optimize costs or increase price'
+            elif item['popularity_score'] < avg_popularity and item['profit_margin'] >= avg_profit_margin:
+                category = 'puzzles'
+                recommendation = 'Increase marketing and visibility'
+            else:
+                category = 'dogs'
+                recommendation = 'Consider removal or recipe improvement'
+            
+            bcg_matrix.append({
+                **item,
+                'bcg_category': category,
+                'recommendation': recommendation,
+                'relative_popularity': item['popularity_score'] / avg_popularity if avg_popularity > 0 else 0,
+                'relative_profitability': item['profit_margin'] / avg_profit_margin if avg_profit_margin > 0 else 0
+            })
+        
+        return bcg_matrix
+    
+    def _get_popularity_trends(self, restaurant_id, days):
+        """Get popularity trends over time"""
+        from datetime import datetime, timedelta
+        
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days)
+        
+        # Get daily popularity snapshots
+        snapshots = PopularitySnapshot.objects.filter(
+            menu_item__category__restaurant_id=restaurant_id,
+            date_recorded__range=[start_date, end_date]
+        ).values('date_recorded').annotate(
+            avg_score=Avg('score'),
+            total_items=Count('menu_item_id')
+        ).order_by('date_recorded')
+        
+        return [
+            {
+                'date': snapshot['date_recorded'].strftime('%Y-%m-%d'),
+                'avg_popularity': float(snapshot['avg_score'] or 0),
+                'items_tracked': snapshot['total_items']
+            }
+            for snapshot in snapshots
+        ]
+    
+    def _calculate_summary_metrics(self, item_performance, category_performance):
+        """Calculate high-level summary metrics"""
+        total_revenue = sum(item['revenue'] for item in item_performance)
+        total_items_sold = sum(item['quantity_sold'] for item in item_performance)
+        total_profit = sum(item['gross_profit'] for item in item_performance)
+        
+        active_items = [item for item in item_performance if item['is_available']]
+        inactive_items = [item for item in item_performance if not item['is_available']]
+        
+        high_performers = [item for item in item_performance if item['profit_margin'] > 30 and item['quantity_sold'] > 10]
+        low_performers = [item for item in item_performance if item['profit_margin'] < 10 or item['quantity_sold'] == 0]
+        
+        return {
+            'total_revenue': float(total_revenue),
+            'total_items_sold': total_items_sold,
+            'total_gross_profit': float(total_profit),
+            'overall_profit_margin': (total_profit / total_revenue * 100) if total_revenue > 0 else 0,
+            'active_menu_items': len(active_items),
+            'inactive_menu_items': len(inactive_items),
+            'total_categories': len(category_performance),
+            'high_performing_items': len(high_performers),
+            'low_performing_items': len(low_performers),
+            'menu_health_score': self._calculate_menu_health_score(item_performance)
+        }
+    
+    def _calculate_menu_health_score(self, item_performance):
+        """Calculate overall menu health score (0-100)"""
+        if not item_performance:
+            return 0
+        
+        # Score based on various factors
+        availability_score = len([item for item in item_performance if item['is_available']]) / len(item_performance) * 30
+        profitability_score = min(np.mean([item['profit_margin'] for item in item_performance]) / 50 * 40, 40)
+        popularity_score = min(np.mean([item['popularity_score'] for item in item_performance]) / 100 * 30, 30)
+        
+        return round(availability_score + profitability_score + popularity_score, 2)
+
+
+class CategoryAnalyticsView(APIView):
+    """Detailed category-level analytics with trends"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        restaurant_id = request.GET.get('restaurant_id')
+        
+        if not restaurant_id:
+            return Response({
+                'error': 'restaurant_id is required',
+                'status': status.HTTP_400_BAD_REQUEST,
+                'success': False
+            })
+        
+        if not self._has_restaurant_access(request.user, restaurant_id):
+            return Response({
+                'error': 'access denied',
+                'status': status.HTTP_403_FORBIDDEN,
+                'success': False
+            })
+        
+        try:
+            category_data = self._get_category_analytics(restaurant_id)
+            serializer = CategoryAnalyticsSerializer(category_data, many=True)
+            return Response({
+                'data': serializer.data,
+                'pagination': None,
+                'status': status.HTTP_200_OK,
+                'success': True
+            })
+        except Exception as e:
+            return Response({
+                'error': f'Category analytics failed: {str(e)}',
+                'status': status.HTTP_500_INTERNAL_SERVER_ERROR,
+                'success': False
+            })
+    
+    def _get_category_analytics(self, restaurant_id):
+        """Get comprehensive category analytics"""
+        from django.db.models import Count, Sum, Avg, F, Q
+        from datetime import timedelta
+        
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        
+        categories = MenuCategory.objects.filter(
+            restaurant_id=restaurant_id
+        ).annotate(
+            # Basic counts
+            total_items=Count('menu_items'),
+            active_items=Count('menu_items', filter=Q(menu_items__is_available=True)),
+            
+            # Sales metrics (last 30 days)
+            items_sold_30d=Coalesce(Sum(
+                'menu_items__order_items__quantity',
+                filter=Q(
+                    menu_items__order_items__order__status='delivered',
+                    menu_items__order_items__order__order_placed_at__gte=thirty_days_ago
+                )
+            ), Value(0)),
+            
+            revenue_30d=Coalesce(Sum(
+                F('menu_items__order_items__quantity') * F('menu_items__order_items__price_at_time'),
+                filter=Q(
+                    menu_items__order_items__order__status='delivered',
+                    menu_items__order_items__order__order_placed_at__gte=thirty_days_ago
+                )
+            ), Value(0.0)),
+            
+            # Recent sales (last 7 days)
+            items_sold_7d=Coalesce(Sum(
+                'menu_items__order_items__quantity',
+                filter=Q(
+                    menu_items__order_items__order__status='delivered',
+                    menu_items__order_items__order__order_placed_at__gte=seven_days_ago
+                )
+            ), Value(0)),
+            
+            # Performance metrics
+            avg_rating=Coalesce(Avg('menu_items__ratings__rating'), Value(0.0)),
+            avg_prep_time=Coalesce(Avg('menu_items__preparation_time'), Value(0)),
+            
+            # Growth calculation (compare last 7 days vs previous 7 days)
+            previous_period_revenue=Coalesce(Sum(
+                F('menu_items__order_items__quantity') * F('menu_items__order_items__price_at_time'),
+                filter=Q(
+                    menu_items__order_items__order__status='delivered',
+                    menu_items__order_items__order__order_placed_at__range=[
+                        thirty_days_ago - timedelta(days=7),
+                        thirty_days_ago
+                    ]
+                )
+            ), Value(0.0))
+        ).values(
+            'category_id', 'name', 'display_color', 'display_order', 'is_active',
+            'total_items', 'active_items', 'items_sold_30d', 'revenue_30d',
+            'items_sold_7d', 'avg_rating', 'avg_prep_time', 'previous_period_revenue'
+        )
+        
+        # Calculate growth rates
+        category_data = []
+        for category in categories:
+            revenue_growth = 0
+            if category['previous_period_revenue'] > 0:
+                revenue_growth = ((category['revenue_30d'] - category['previous_period_revenue']) / 
+                                category['previous_period_revenue'] * 100)
+            
+            category_data.append({
+                **category,
+                'revenue_30d': float(category['revenue_30d']),
+                'previous_period_revenue': float(category['previous_period_revenue']),
+                'revenue_growth': round(revenue_growth, 2),
+                'performance_score': self._calculate_category_performance_score(category)
+            })
+        
+        return category_data
+    
+    def _calculate_category_performance_score(self, category):
+        """Calculate performance score for category (0-100)"""
+        score = 0
+        
+        # Revenue contribution (max 40 points)
+        if category['revenue_30d'] > 1000:
+            score += 40
+        elif category['revenue_30d'] > 500:
+            score += 30
+        elif category['revenue_30d'] > 100:
+            score += 20
+        else:
+            score += 10
+        
+        # Growth (max 20 points)
+        if category['revenue_growth'] > 20:
+            score += 20
+        elif category['revenue_growth'] > 10:
+            score += 15
+        elif category['revenue_growth'] > 0:
+            score += 10
+        else:
+            score += 5
+        
+        # Item utilization (max 20 points)
+        utilization = (category['active_items'] / category['total_items']) * 100 if category['total_items'] > 0 else 0
+        if utilization > 80:
+            score += 20
+        elif utilization > 60:
+            score += 15
+        elif utilization > 40:
+            score += 10
+        else:
+            score += 5
+        
+        # Rating (max 20 points)
+        if category['avg_rating'] > 4.0:
+            score += 20
+        elif category['avg_rating'] > 3.0:
+            score += 15
+        elif category['avg_rating'] > 2.0:
+            score += 10
+        else:
+            score += 5
+        
+        return min(score, 100)
+
+
+class ItemAssociationsView(APIView):
+    """Get items frequently bought together with confidence scores"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, item_id):
+        if not self._has_item_access(request.user, item_id):
+            return Response({'error': 'Access denied to this item'}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            associations = self._calculate_item_associations(item_id)
+            return Response(associations)
+        except Exception as e:
+            return Response(
+                {'error': f'Association calculation failed: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def _has_item_access(self, user, item_id):
+        """Verify user has access to this menu item"""
+        try:
+            item = MenuItem.objects.get(item_id=item_id)
+            if user.user_type == 'owner':
+                return item.category.restaurant.owner == user
+            elif user.user_type == 'staff':
+                return item.category.restaurant.staff_members.filter(user=user).exists()
+            elif user.user_type == 'admin':
+                return True
+            return False
+        except MenuItem.DoesNotExist:
+            return False
+    
+    def _calculate_item_associations(self, item_id):
+        """Calculate items frequently bought together with the given item"""
+        from collections import Counter
+        
+        # Get all orders that contain the target item
+        target_orders = OrderItem.objects.filter(
+            menu_item_id=item_id,
+            order__status='delivered'
+        ).values_list('order_id', flat=True).distinct()
+        
+        if not target_orders:
+            return []
+        
+        # Find other items in those orders
+        associated_items = OrderItem.objects.filter(
+            order_id__in=target_orders
+        ).exclude(menu_item_id=item_id).select_related('menu_item')
+        
+        # Count co-occurrences
+        item_counter = Counter()
+        for order_item in associated_items:
+            item_counter[order_item.menu_item_id] += 1
+        
+        total_orders_with_target = len(target_orders)
+        
+        # Calculate association metrics
+        associations = []
+        for menu_item_id, count in item_counter.most_common(10):  # Top 10 associations
+            try:
+                menu_item = MenuItem.objects.get(item_id=menu_item_id)
+                confidence = (count / total_orders_with_target) * 100
+                support = count
+                
+                associations.append({
+                    'item_id': menu_item.item_id,
+                    'name': menu_item.name,
+                    'price': float(menu_item.price),
+                    'category': menu_item.category.name,
+                    'confidence': round(confidence, 2),
+                    'support': support,
+                    'lift': self._calculate_lift(item_id, menu_item_id, count, total_orders_with_target)
+                })
+            except MenuItem.DoesNotExist:
+                continue
+        
+        return associations
+    
+    def _calculate_lift(self, item_a_id, item_b_id, co_occurrence, total_orders_with_a):
+        """Calculate lift metric for association rules"""
+        from django.db.models import Count
+        
+        # Total number of orders
+        total_orders = Order.objects.filter(status='delivered').count()
+        if total_orders == 0:
+            return 1.0
+        
+        # Number of orders containing item B
+        orders_with_b = OrderItem.objects.filter(
+            menu_item_id=item_b_id,
+            order__status='delivered'
+        ).values('order_id').distinct().count()
+        
+        if orders_with_b == 0:
+            return 1.0
+        
+        # Calculate lift: P(A&B) / (P(A) * P(B))
+        prob_a_and_b = co_occurrence / total_orders
+        prob_a = total_orders_with_a / total_orders
+        prob_b = orders_with_b / total_orders
+        
+        if prob_a * prob_b == 0:
+            return 1.0
+        
+        lift = prob_a_and_b / (prob_a * prob_b)
+        return round(lift, 3)
+
+
+class BulkMenuOperationsView(APIView):
+    """Handle bulk operations on menu items and categories"""
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        operation_type = request.data.get('operation_type')
+        restaurant_id = request.data.get('restaurant_id')
+        items = request.data.get('items', [])
+        
+        if not restaurant_id or not operation_type:
+            return Response(
+                {'error': 'restaurant_id and operation_type are required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not self._has_restaurant_access(request.user, restaurant_id):
+            return Response({'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            if operation_type == 'update_prices':
+                result = self._bulk_update_prices(restaurant_id, items)
+            elif operation_type == 'update_availability':
+                result = self._bulk_update_availability(restaurant_id, items)
+            elif operation_type == 'update_categories':
+                result = self._bulk_update_categories(restaurant_id, items)
+            else:
+                return Response({'error': 'Invalid operation type'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            return Response(result)
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Bulk operation failed: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def _bulk_update_prices(self, restaurant_id, items):
+        """Bulk update menu item prices"""
+        from django.db import transaction
+        
+        updated_count = 0
+        with transaction.atomic():
+            for item_data in items:
+                item_id = item_data.get('item_id')
+                new_price = item_data.get('new_price')
+                
+                if not item_id or new_price is None:
+                    continue
+                
+                try:
+                    menu_item = MenuItem.objects.get(
+                        item_id=item_id,
+                        category__restaurant_id=restaurant_id
+                    )
+                    menu_item.price = new_price
+                    menu_item.save()
+                    updated_count += 1
+                except MenuItem.DoesNotExist:
+                    continue
+        
+        return {
+            'operation': 'update_prices',
+            'updated_count': updated_count,
+            'total_items': len(items)
+        }
+    
+    def _bulk_update_availability(self, restaurant_id, items):
+        """Bulk update menu item availability"""
+        from django.db import transaction
+        
+        updated_count = 0
+        with transaction.atomic():
+            for item_data in items:
+                item_id = item_data.get('item_id')
+                is_available = item_data.get('is_available')
+                
+                if not item_id or is_available is None:
+                    continue
+                
+                try:
+                    menu_item = MenuItem.objects.get(
+                        item_id=item_id,
+                        category__restaurant_id=restaurant_id
+                    )
+                    menu_item.is_available = is_available
+                    menu_item.save()
+                    updated_count += 1
+                except MenuItem.DoesNotExist:
+                    continue
+        
+        return {
+            'operation': 'update_availability',
+            'updated_count': updated_count,
+            'total_items': len(items)
+        }
+    
+    def _bulk_update_categories(self, restaurant_id, items):
+        """Bulk update menu item categories"""
+        from django.db import transaction
+        
+        updated_count = 0
+        with transaction.atomic():
+            for item_data in items:
+                item_id = item_data.get('item_id')
+                category_id = item_data.get('category_id')
+                
+                if not item_id or not category_id:
+                    continue
+                
+                try:
+                    # Verify both item and category belong to the same restaurant
+                    menu_item = MenuItem.objects.get(
+                        item_id=item_id,
+                        category__restaurant_id=restaurant_id
+                    )
+                    new_category = MenuCategory.objects.get(
+                        category_id=category_id,
+                        restaurant_id=restaurant_id
+                    )
+                    
+                    menu_item.category = new_category
+                    menu_item.save()
+                    updated_count += 1
+                except (MenuItem.DoesNotExist, MenuCategory.DoesNotExist):
+                    continue
+        
+        return {
+            'operation': 'update_categories',
+            'updated_count': updated_count,
+            'total_items': len(items)
+        }
+
+
+class RealTimeMenuMetricsView(APIView):
+    """Real-time metrics for menu performance"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, restaurant_id):
+        if not self._has_restaurant_access(request.user, restaurant_id):
+            return Response({'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            metrics = self._get_real_time_metrics(restaurant_id)
+            return Response(metrics)
+        except Exception as e:
+            return Response(
+                {'error': f'Real-time metrics failed: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def _get_real_time_metrics(self, restaurant_id):
+        """Get real-time menu performance metrics"""
+        from datetime import datetime, timedelta
+        
+        now = timezone.now()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        current_hour = now.replace(minute=0, second=0, microsecond=0)
+        
+        # Today's metrics
+        today_orders = Order.objects.filter(
+            restaurant_id=restaurant_id,
+            order_placed_at__gte=today_start,
+            status='delivered'
+        )
+        
+        today_metrics = today_orders.aggregate(
+            total_orders=Count('order_id'),
+            total_revenue=Coalesce(Sum('total_amount'), Value(0.0)),
+            avg_order_value=Coalesce(Avg('total_amount'), Value(0.0))
+        )
+        
+        # Current hour metrics
+        current_hour_orders = Order.objects.filter(
+            restaurant_id=restaurant_id,
+            order_placed_at__gte=current_hour,
+            status='delivered'
+        )
+        
+        current_hour_metrics = current_hour_orders.aggregate(
+            orders_count=Count('order_id'),
+            revenue=Coalesce(Sum('total_amount'), Value(0.0))
+        )
+        
+        # Active preparations
+        active_preparations = Order.objects.filter(
+            restaurant_id=restaurant_id,
+            status__in=['preparing', 'ready_for_pickup'],
+            order_placed_at__gte=today_start
+        ).count()
+        
+        # Low stock alerts (simplified - based on popularity and recent sales)
+        popular_items = MenuItem.objects.filter(
+            category__restaurant_id=restaurant_id,
+            is_available=True
+        ).annotate(
+            recent_orders=Count('order_items', filter=Q(
+                order_items__order__order_placed_at__gte=today_start - timedelta(days=7)
+            ))
+        ).order_by('-recent_orders')[:10]
+        
+        low_stock_alerts = []
+        for item in popular_items:
+            # Simplified stock alert logic
+            if item.recent_orders > 20:  # High demand items
+                low_stock_alerts.append({
+                    'item_id': item.item_id,
+                    'name': item.name,
+                    'alert_level': 'high' if item.recent_orders > 50 else 'medium',
+                    'message': f'High demand item - monitor stock levels'
+                })
+        
+        return {
+            'timestamp': now.isoformat(),
+            'today_metrics': {
+                'total_orders': today_metrics['total_orders'],
+                'total_revenue': float(today_metrics['total_revenue']),
+                'average_order_value': float(today_metrics['avg_order_value'])
+            },
+            'current_hour_metrics': {
+                'orders_count': current_hour_metrics['orders_count'],
+                'revenue': float(current_hour_metrics['revenue'])
+            },
+            'operational_metrics': {
+                'active_preparations': active_preparations,
+                'kitchen_load': min(active_preparations * 10, 100),  # Simplified load calculation
+                'low_stock_alerts': len(low_stock_alerts)
+            },
+            'alerts': low_stock_alerts
+        }
