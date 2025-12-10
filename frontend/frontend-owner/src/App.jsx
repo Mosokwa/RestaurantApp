@@ -17,13 +17,13 @@ import VerifyEmailRoute from './components/verification/VerifyEmailRoute';
 import ComponentErrorBoundary from './components/ComponentErrorBoundary';
 import PublicRoute from './components/PublicRoute';
 import RestaurantOnboarding from './components/onboarding/RestaurantOnboarding';
+import MenuBuilderPage from './pages/MenuBuilderPage';
+import CategoriesPage from './pages/CategoriesPage';
+import ItemsPage from './pages/ItemsPage';
+import ModifiersPage from './pages/ModifiersPage';
 
 // Placeholder components for demonstration
 const OrdersPage = () => <div className="p-6">Orders Management Page</div>;
-const MenuBuilderPage = () => <div className="p-6">Menu Builder Page</div>;
-const CategoriesPage = () => <div className="p-6">Categories Page</div>;
-const ItemsPage = () => <div className="p-6">Items Page</div>;
-const ModifiersPage = () => <div className="p-6">Modifiers Page</div>;
 const SalesAnalyticsPage = () => <div className="p-6">Sales Analytics Page</div>;
 const CustomerInsightsPage = () => <div className="p-6">Customer Insights Page</div>;
 const MenuPerformancePage = () => <div className="p-6">Menu Performance Page</div>;

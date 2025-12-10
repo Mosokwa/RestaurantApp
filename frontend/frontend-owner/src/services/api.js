@@ -93,6 +93,20 @@ api.interceptors.request.use(
       config.headers['X-CSRFToken'] = csrfToken;
     }
 
+    // Add cache busting for GET requests to analytics endpoints
+    if (config.method === 'get' && config.url.includes('/analytics/')) {
+      config.params = {
+        ...config.params,
+        _: Date.now() // Cache buster
+      };
+    }
+
+    // Add timeout for analytics requests
+    if (config.url.includes('/analytics/')) {
+      config.timeout = 30000; // 30 seconds for analytics
+    }
+
+
     // ONLY ADDITION: Add AbortController for cancellation
     const controller = new AbortController();
     config.signal = controller.signal;
@@ -154,6 +168,17 @@ api.interceptors.response.use(
       } catch (refreshError) {
         console.error('❌ Token refresh failed:', refreshError);
       }
+    }
+
+    // Handle menu-specific errors
+    if (error.response?.status === 404 && originalRequest.url.includes('/menu/')) {
+      console.warn('Menu resource not found:', originalRequest.url);
+      // You might want to dispatch an action to update the state
+    }
+
+    // Handle validation errors for menu operations
+    if (error.response?.status === 400 && originalRequest.url.includes('/menu/')) {
+      console.warn('Menu validation error:', error.response.data);
     }
 
     return Promise.reject(error);

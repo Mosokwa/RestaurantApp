@@ -3,6 +3,7 @@ import authReducer from './slices/authSlice';
 import restaurantReducer from './slices/restaurantSlice';
 import OwnerAuthReducer from './slices/ownerAuthSlice';
 import DashboardReducer from './slices/dashboardSlice';
+import menuReducer from './slices/menuSlice';
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     restaurant: restaurantReducer,
     ownerAuth: OwnerAuthReducer,
     dashboard: DashboardReducer,
+    menu: menuReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

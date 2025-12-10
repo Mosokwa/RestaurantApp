@@ -1,0 +1,559 @@
+/* Item Analytics Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.analytics-modal-glass {
+  backdrop-filter: var(--glass-blur);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow-hover);
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 24px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icon {
+  color: var(--color-info);
+}
+
+.header-text h2 {
+  color: white;
+  margin: 0 0 4px 0;
+  font-size: 1.5rem;
+  font-family: var(--font-heading);
+}
+
+.header-text p {
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  font-size: 0.875rem;
+  font-family: var(--font-body);
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 8px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  backdrop-filter: var(--glass-blur);
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* Time Filter */
+.time-filter-glass {
+  backdrop-filter: var(--glass-blur);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  margin: 0 24px 24px;
+  padding: 16px;
+}
+
+.filter-options {
+  display: flex;
+  gap: 8px;
+}
+
+.time-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.time-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.time-btn.active {
+  background: var(--color-info);
+  color: white;
+  border-color: var(--color-info);
+}
+
+/* Metrics Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 0 24px 24px;
+}
+
+.metric-card {
+  backdrop-filter: var(--glass-blur);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: var(--transition-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 1px;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.3), 
+    rgba(255, 255, 255, 0.1));
+  mask: linear-gradient(#fff 0 0) content-box, 
+        linear-gradient(#fff 0 0);
+  mask-composite: xor;
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+}
+
+.metric-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.metric-card.revenue {
+  border-left: 3px solid var(--color-success);
+}
+
+.metric-card.sales {
+  border-left: 3px solid var(--color-info);
+}
+
+.metric-card.rating {
+  border-left: 3px solid var(--color-warning);
+}
+
+.metric-card.popularity {
+  border-left: 3px solid var(--color-accent);
+}
+
+.metric-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  backdrop-filter: var(--glass-blur);
+}
+
+.metric-card.revenue .metric-icon {
+  background: rgba(39, 174, 96, 0.2);
+  color: var(--color-success);
+  border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+.metric-card.sales .metric-icon {
+  background: rgba(52, 152, 219, 0.2);
+  color: var(--color-info);
+  border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.metric-card.rating .metric-icon {
+  background: rgba(241, 196, 15, 0.2);
+  color: var(--color-warning);
+  border: 1px solid rgba(241, 196, 15, 0.3);
+}
+
+.metric-card.popularity .metric-icon {
+  background: rgba(231, 76, 60, 0.2);
+  color: var(--color-accent);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.metric-content h4 {
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 8px 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+}
+
+.metric-value {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  font-family: var(--font-monospace);
+}
+
+.metric-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
+  font-family: var(--font-body);
+}
+
+/* Sections */
+.performance-section,
+.trends-section,
+.comparison-section {
+  padding: 0 24px 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.section-header h3 {
+  color: white;
+  margin: 0;
+  font-size: 1.125rem;
+  font-family: var(--font-heading);
+}
+
+.section-header svg {
+  color: var(--color-info);
+}
+
+/* Performance Glass */
+.performance-glass,
+.trends-glass,
+.comparison-glass {
+  backdrop-filter: var(--glass-blur);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.performance-glass {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.performance-score {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.score-circle {
+  width: 80px;
+  height: 80px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.score-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  mask: radial-gradient(transparent 60%, black 61%);
+}
+
+.score-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: var(--font-monospace);
+  z-index: 1;
+}
+
+.score-info h4 {
+  color: white;
+  margin: 0 0 4px 0;
+  font-family: var(--font-heading);
+}
+
+.score-info p {
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  font-size: 0.875rem;
+  font-family: var(--font-body);
+}
+
+.performance-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.detail-label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+  font-family: var(--font-body);
+}
+
+.detail-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+  font-weight: 600;
+  font-family: var(--font-monospace);
+  font-size: 0.875rem;
+}
+
+/* Trends */
+.trends-glass {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trend-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  transition: var(--transition-smooth);
+}
+
+.trend-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.trend-period {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  font-family: var(--font-body);
+}
+
+.trend-metrics {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.trend-value {
+  color: white;
+  font-weight: 600;
+  font-family: var(--font-monospace);
+}
+
+.trend-change {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-family: var(--font-body);
+}
+
+.trend-change.positive {
+  background: rgba(39, 174, 96, 0.2);
+  color: var(--color-success);
+  border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+.trend-change.negative {
+  background: rgba(231, 76, 60, 0.2);
+  color: var(--color-accent);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+/* Comparison */
+.comparison-glass {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comparison-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.comparison-label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+  font-family: var(--font-body);
+}
+
+.comparison-value {
+  color: white;
+  font-weight: 600;
+  font-family: var(--font-monospace);
+}
+
+/* Modal Actions */
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 24px;
+  border-top: 1px solid var(--glass-border);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 12px;
+  }
+  
+  .analytics-modal-glass {
+    max-height: 95vh;
+  }
+  
+  .modal-header {
+    padding: 20px;
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .header-content {
+    justify-content: center;
+    text-align: center;
+  }
+  
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    padding: 0 20px 20px;
+    gap: 12px;
+  }
+  
+  .performance-glass {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+  
+  .performance-details {
+    width: 100%;
+  }
+  
+  .performance-section,
+  .trends-section,
+  .comparison-section {
+    padding: 0 20px 20px;
+  }
+  
+  .time-filter-glass {
+    margin: 0 20px 20px;
+  }
+  
+  .filter-options {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+    padding: 20px;
+  }
+  
+  .modal-actions .btn-primary,
+  .modal-actions .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .analytics-modal-glass {
+    backdrop-filter: blur(15px) saturate(180%);
+  }
+  
+  .modal-header {
+    padding: 16px;
+  }
+  
+  .metrics-grid,
+  .performance-section,
+  .trends-section,
+  .comparison-section {
+    padding: 0 16px 16px;
+  }
+  
+  .time-filter-glass {
+    margin: 0 16px 16px;
+  }
+  
+  .performance-glass,
+  .trends-glass,
+  .comparison-glass {
+    padding: 16px;
+  }
+  
+  .score-circle {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .score-value {
+    font-size: 1rem;
+  }
+}
