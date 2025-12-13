@@ -535,3 +535,38 @@ class SpecialOffer(models.Model):
                     return f"This {next_day.capitalize()}"  # "This Tuesday"
         
         return "Not available soon"
+
+class PopularCategory(models.Model):
+    """
+    Popular food categories for quick access on homepage
+    """
+    category_id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=100, unique=True)
+    icon = models.CharField(max_length=50, help_text="FontAwesome or custom icon class")
+    color = models.CharField(max_length=7, default='#FF6B35')
+    display_order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    search_query = models.CharField(max_length=100, help_text="Search query to use when clicked")
+    description = models.TextField(blank=True, null=True)
+    
+    # Link to restaurants (optional - for curated categories)
+    restaurants = models.ManyToManyField(
+        'api.Restaurant',
+        related_name='popular_categories',
+        blank=True
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'popular_categories'
+        ordering = ['display_order', 'name']
+        verbose_name_plural = 'popular categories'
+    
+    def __str__(self):
+        return self.name
+    
+    @property
+    def active_restaurant_count(self):
+        """Count active restaurants in this category"""
+        return self.restaurants.filter(status='active').count()

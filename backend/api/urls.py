@@ -2,7 +2,8 @@ from rest_framework import routers
 from django.urls import include, path
 from .views import (
     UserProfileView, CurrentUserView, CustomerListView, CustomerDetailView, RestaurantStaffListView, RestaurantStaffDetailView, MyStaffProfileView, LoginView, SignupView, LogoutView, CSRFTokenView, JWTObtainPairView, PasswordResetView, PasswordResetConfirmView, EmailVerificationView, VerifyCodeView, ChangePasswordView, RefreshTokenView, UserBehaviorViewSet, UserPreferenceView, PersonalizedRecommendationView, TrendingRecommendationView, PopularRestaurantsView, TrendingDishesView, PersonalizedRecommendationsView, HomepageSpecialOffersView, CuisineListView, CuisineCreateView, CuisineDetailView, CuisineDeleteView, CuisineUpdateView, MenuCategoryListView, MenuCategoryCreateView, RestaurantMenuView, MenuItemListView, MenuItemDetailView, SpecialOfferView, MenuItemCreateView, EnhancedRestaurantListView, RestaurantListView, RestaurantDetailView, RestaurantCreateView, MyRestaurantsView, RestaurantUpdateView, RestaurantDeleteView, RestaurantOnboardingView, BranchCreateView, BranchListView, BranchDetailView, BranchUpdateView, BranchDeleteView, RestaurantBranchesView, ComprehensiveSearchView, SearchSuggestionsView, MenuItemSearchView, restaurant_search, nearby_restaurants, ItemModifierGroupListView, ItemModifierGroupDetailView, ItemModifierListView, ItemModifierDetailView, MenuItemModifierListView, MenuItemModifierDetailView, MenuItemModifiersView, BulkMenuItemModifiersView, OrderListView, OrderDetailView, OrderUpdateView, MyOrdersView, PaymentCreateView, PaymentDetailView, CartDetailView, CartItemView, CartItemUpdateView, CartItemDeleteView, RestaurantReviewListView, DishReviewListView, ReviewResponseView, ReviewHelpfulVoteView, ReviewReportView, RestaurantReviewAnalyticsView, UserReviewsView, ReviewModerationListView, ReviewModerationUpdateView, RestaurantRatingView, DishRatingView, QuickRatingView, RatingStatsView, BulkRatingView, UserRatingsView, OrderTrackingView, RestaurantSalesAnalyticsView, DailySalesReportView, MonthlySalesReportView, RestaurantPerformanceMetricsView, SalesTrendsView, CustomerInsightsView, OperationalMetricsView, FinancialReportsView, ComparativeAnalyticsView, ExportAnalyticsView, DashboardMetricsView, SimilarItemsView, TrackUserBehaviorView, MultiRestaurantLoyaltyViewSet, RewardViewSet, RestaurantLoyaltySettingsViewSet, RestaurantRewardViewSet, OwnerLoyaltyDashboardViewSet, GroupOrderViewSet, OrderTemplateViewSet, ScheduledOrderViewSet, BulkOrderViewSet, AdvancedOrderViewSet, CartApplyOfferView, CartRemoveOfferView, RestaurantHomepageRecommendationsView, RestaurantPopularItemsView, RestaurantSimilarItemsView, RestaurantTrendingItemsView, ReservationViewSet, TableViewSet, TimeSlotViewSet, RestaurantsSearchView, RestaurantAvailabilityView, RestaurantHomepageViewSet, POSConnectionViewSet, TableLayoutViewSet, KitchenStationViewSet,
-    OrderRoutingViewSet, KitchenOrderViewSet, pos_order_webhook, pos_menu_webhook, pos_inventory_webhook, route_order_to_kitchen, assign_order_station, update_preparation_status, OwnerLoginView, OwnerRegisterView, OwnerProfileView, OwnerRestaurantsView, StaffInviteView, OwnerEmailVerificationView, OwnerVerifyCodeView, health_check, GoogleAuthView, AppleAuthView, SocialAuthHealthView, EnhancedMenuPerformanceView, CategoryAnalyticsView, ItemAssociationsView, BulkMenuOperationsView, RealTimeMenuMetricsView
+    OrderRoutingViewSet, KitchenOrderViewSet, pos_order_webhook, pos_menu_webhook, pos_inventory_webhook, route_order_to_kitchen, assign_order_station, update_preparation_status, OwnerLoginView, OwnerRegisterView, OwnerProfileView, OwnerRestaurantsView, StaffInviteView, OwnerEmailVerificationView, OwnerVerifyCodeView, health_check, GoogleAuthView, AppleAuthView, SocialAuthHealthView, EnhancedMenuPerformanceView, CategoryAnalyticsView, ItemAssociationsView, BulkMenuOperationsView, RealTimeMenuMetricsView, QuickCategoriesView, NewRestaurantsView, UserFavoritesView, 
+    DietaryPicksView, RecentlyViewedView, TimeBasedRecommendationsView, RestaurantsYouMightLikeView, FastDeliveryRestaurantsView, PriceRangeFilterView, LocalFavoritesView, TrendingTodayView, ExploreOtherCitiesView, RestaurantStoriesView
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 from .two_factor_views import TwoFactorSetupView, TwoFactorVerifyView, TwoFactorDisableView
@@ -111,6 +112,23 @@ urlpatterns = [
     path('homepage/trending-dishes/', TrendingDishesView.as_view(), name='trending_dishes'),
     path('homepage/personalized-recommendations/', PersonalizedRecommendationsView.as_view(), name='personalized_recommendations'),
     path('homepage/special-offers/', HomepageSpecialOffersView.as_view(), name='homepage_special_offers'),
+
+    # Enhanced homepage endpoints
+    path('homepage/quick-categories/', QuickCategoriesView.as_view(), name='quick_categories'),
+    path('homepage/new-restaurants/', NewRestaurantsView.as_view(), name='new_restaurants'),
+    path('homepage/user-favorites/', UserFavoritesView.as_view(), name='user_favorites'),
+    path('homepage/dietary-picks/', DietaryPicksView.as_view(), name='dietary_picks'),
+    path('homepage/recently-viewed/', RecentlyViewedView.as_view(), name='recently_viewed'),
+
+    path('homepage/time-based-recommendations/', TimeBasedRecommendationsView.as_view(), name='time_based_recommendations'),
+    path('homepage/restaurants-you-might-like/', RestaurantsYouMightLikeView.as_view(), name='restaurants_you_might_like'),
+    path('homepage/fast-delivery/', FastDeliveryRestaurantsView.as_view(), name='fast_delivery'),
+    path('homepage/price-ranges/', PriceRangeFilterView.as_view(), name='price_ranges'),
+
+    path('homepage/local-favorites/', LocalFavoritesView.as_view(), name='local_favorites'),
+    path('homepage/trending-today/', TrendingTodayView.as_view(), name='trending_today'),
+    path('homepage/explore-cities/', ExploreOtherCitiesView.as_view(), name='explore_cities'),
+    path('homepage/restaurant-stories/', RestaurantStoriesView.as_view(), name='restaurant_stories'),
 
     #personalized recommendations endpoints
     path('recommendations/personalized/', PersonalizedRecommendationView.as_view(), name='personalized-recommendations'),
