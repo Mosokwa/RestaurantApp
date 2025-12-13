@@ -11,9 +11,22 @@ import {
   loadMoreTrendingDishes
 } from '../store/slices/homepageSlice';
 import HeroSection from '../components/homepage/HeroSection';
+import QuickCategories from '../components/homepage/QuickCategories';
 import DishGrid from '../components/homepage/DishGrid';
 import SpecialOffers from '../components/homepage/SpecialOffers';
 import RestaurantCarousel from '../components/homepage/RestaurantCarousel';
+import NewRestaurantsCarousel from '../components/homepage/NewRestaurantsCarousel';
+import UserFavorites from '../components/homepage/UserFavorites';
+import DietaryPicks from '../components/homepage/DietaryPicks';
+import RecentlyViewed from '../components/homepage/RecentlyViewed';
+import TimeBasedRecommendations from '../components/homepage/TimebasedRecommendations';
+import RestaurantsYouMightLike from '../components/homepage/RestaurantsYouMightLike';
+import FastDeliverySection from '../components/homepage/FastDeliverySection';
+import PriceRangeFilter from '../components/homepage/PriceRangeFilter';
+import LocalFavorites from '../components/homepage/LocalFavorites';
+import TrendingToday from '../components/homepage/TrendingToday';
+import ExploreOtherCities from '../components/homepage/ExploreOtherCities';
+import RestaurantStories from '../components/homepage/RestaurantStories';
 import '../components/homepage/Homepage.css';
 
 const Homepage = () => {
@@ -34,8 +47,6 @@ const Homepage = () => {
     dishes: false,
     offers: false
   });
-
-  
 
   useEffect(() => {
     const fetchDataWithLocation = async (locationData) => {
@@ -99,17 +110,16 @@ const Homepage = () => {
     setLoadingMore(prev => ({ ...prev, restaurants: true }));
     try {
       const nextPage = popularRestaurants.currentPage + 1;
-            
       const result = await dispatch(fetchPopularRestaurants({ 
         page: nextPage,
         pageSize: 12
       })).unwrap();
-
+      
       dispatch(loadMorePopularRestaurants(result));
     } catch (error) {
-        console.error('Error loading more:', error);
+      console.error('Error loading more:', error);
     } finally {
-        setLoadingMore(prev => ({ ...prev, restaurants: false }));
+      setLoadingMore(prev => ({ ...prev, restaurants: false }));
     }
   };
 
@@ -161,6 +171,13 @@ const Homepage = () => {
     <div className="homepage">
       <HeroSection />
       
+      {/* Quick Categories - Always show */}
+      <QuickCategories />
+      
+      {/* Price Range Filter */}
+      <PriceRangeFilter location={userLocation} />
+      
+      {/* Popular Restaurants */}
       <RestaurantCarousel 
         title="Popular Restaurants Near You" 
         restaurants={popularRestaurants.items}
@@ -169,7 +186,37 @@ const Homepage = () => {
         onLoadMore={handleLoadMoreRestaurants}
         loadMoreLoading={loadingMore.restaurants}
       />
-
+      
+      {/* Fast Delivery Section */}
+      <FastDeliverySection location={userLocation} />
+      
+      {/* Local Favorites */}
+      <LocalFavorites location={userLocation} />
+      
+      {/* Time-Based Recommendations */}
+      <TimeBasedRecommendations location={userLocation} />
+      
+      {/* Trending Today */}
+      <TrendingToday location={userLocation} />
+      
+      {/* User-specific sections (only for authenticated users) */}
+      {isAuthenticated && (
+        <>
+          {/* User Favorites */}
+          <UserFavorites location={userLocation} />
+          
+          {/* Restaurants You Might Like */}
+          <RestaurantsYouMightLike location={userLocation} />
+          
+          {/* Recently Viewed */}
+          <RecentlyViewed location={userLocation} />
+          
+          {/* Dietary Picks */}
+          <DietaryPicks location={userLocation} />
+        </>
+      )}
+      
+      {/* Trending Dishes */}
       <DishGrid 
         title="Trending Dishes in Your Area" 
         dishes={trendingDishes.items}
@@ -179,16 +226,7 @@ const Homepage = () => {
         loadMoreLoading={loadingMore.dishes}
       />
       
-      {isAuthenticated && (
-        <DishGrid 
-          title="Just For You" 
-          dishes={personalizedRecommendations.items}
-          pagination={personalizedRecommendations.pagination}
-          loading={isLoading && personalizedRecommendations.items.length === 0}
-          // Note: Personalized recommendations might not need load more
-        />
-      )}
-      
+      {/* Special Offers */}
       <SpecialOffers 
         offers={specialOffers.items}
         pagination={specialOffers.pagination}
@@ -197,15 +235,15 @@ const Homepage = () => {
         loadMoreLoading={loadingMore.offers}
       />
       
-      <RestaurantCarousel 
-        title="Popular Restaurants Near You" 
-        restaurants={popularRestaurants.items}
-        pagination={popularRestaurants.pagination}
-        loading={isLoading && popularRestaurants.items.length === 0}
-        onLoadMore={handleLoadMoreRestaurants}
-        loadMoreLoading={loadingMore.restaurants}
-        //using the same data for demo
-      />
+      {/* Restaurant Stories - Phase 4 */}
+      <RestaurantStories />
+      
+      {/* New Restaurants */}
+      <NewRestaurantsCarousel location={userLocation} />
+      
+      {/* Explore Other Cities - Phase 4 */}
+      <ExploreOtherCities currentCity={userLocation?.city} />
+      
     </div>
   );
 };

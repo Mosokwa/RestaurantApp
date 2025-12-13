@@ -3,7 +3,42 @@ import LoadMoreButton from '../common/LoadMoreButton';
 import './Homepage.css';
 
 const RestaurantCarousel = ({ title, restaurants, pagination, loading, onLoadMore, loadMoreLoading }) => {
-  if (loading && (!restaurants || restaurants.length === 0)) {
+  // Helper function to safely format rating
+  const formatRating = (rating) => {
+    if (rating === null || rating === undefined || isNaN(rating)) {
+      return '4.5';
+    }
+    return typeof rating === 'number' ? rating.toFixed(1) : rating;
+  };
+
+  // Get the actual restaurants array from the data
+  const getRestaurantsArray = () => {
+    if (!restaurants) return [];
+    
+    // If restaurants is an array, return it directly
+    if (Array.isArray(restaurants)) return restaurants;
+    
+    // If restaurants is an object with a restaurants property
+    if (restaurants.restaurants && Array.isArray(restaurants.restaurants)) {
+      return restaurants.restaurants;
+    }
+    
+    // If restaurants is an object with a results property
+    if (restaurants.results && Array.isArray(restaurants.results)) {
+      return restaurants.results;
+    }
+    
+    // If restaurants is an object with an items property
+    if (restaurants.items && Array.isArray(restaurants.items)) {
+      return restaurants.items;
+    }
+    
+    return [];
+  };
+
+  const restaurantsArray = getRestaurantsArray();
+
+  if (loading && restaurantsArray.length === 0) {
     return (
       <section className="restaurant-carousel">
         <h2>{title}</h2>
@@ -16,7 +51,7 @@ const RestaurantCarousel = ({ title, restaurants, pagination, loading, onLoadMor
     );
   }
   
-  if (!restaurants || restaurants.length === 0) {
+  if (!restaurantsArray || restaurantsArray.length === 0) {
     return null;
   }
   
@@ -24,10 +59,10 @@ const RestaurantCarousel = ({ title, restaurants, pagination, loading, onLoadMor
     <section className="restaurant-carousel">
       <h2>{title}</h2>
       <div className="carousel-container">
-        {restaurants.restaurants.map(restaurant => (
+        {restaurantsArray.map(restaurant => (
           <Link 
-            key={restaurant.restaurant_id} 
-            to={`/restaurant/${restaurant.restaurant_id}`}
+            key={restaurant.restaurant_id || restaurant.id} 
+            to={`/restaurant/${restaurant.restaurant_id || restaurant.id}`}
             className="restaurant-card"
           >
             <div className="restaurant-image">
@@ -39,8 +74,7 @@ const RestaurantCarousel = ({ title, restaurants, pagination, loading, onLoadMor
                 }}
               />
               <div className="restaurant-rating">
-                {/* ⭐ {restaurant.overall_rating ? restaurant.overall_rating.toFixed(1) : '4.5'} */}
-                4.5
+                ⭐ {formatRating(restaurant.overall_rating)}
               </div>
             </div>
             <div className="restaurant-info">
@@ -63,7 +97,7 @@ const RestaurantCarousel = ({ title, restaurants, pagination, loading, onLoadMor
       )}
       
       {/* Loading indicator for additional items */}
-      {loading && restaurants.length > 0 && (
+      {loading && restaurantsArray.length > 0 && (
         <div className="loading-more">
           <div className="spinner"></div>
           <p>Loading more restaurants...</p>

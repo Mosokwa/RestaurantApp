@@ -123,18 +123,56 @@ api.interceptors.response.use(
 
 // Helper function to extract pagination info from response
 export const parsePaginatedResponse = (response) => {
-    if (response.data && response.data.results !== undefined) {
+    if (!response.data) {
         return {
-            items: response.data.results,
+            items: [],
+            pagination: null
+        };
+    }
+    
+    const data = response.data;
+    
+    // Check for different possible response structures
+    if (data.results !== undefined && Array.isArray(data.results)) {
+        // Standard Django DRF pagination
+        return {
+            items: data.results,
             pagination: {
-                count: response.data.count,
-                next: response.data.next,
-                previous: response.data.previous,
+                count: data.count,
+                next: data.next,
+                previous: data.previous,
             }
         };
     }
+    else if (data.restaurants !== undefined && Array.isArray(data.restaurants)) {
+        // Homepage popular restaurants endpoint
+        return {
+            items: data.restaurants,
+            pagination: {
+                count: data.restaurants.length,
+                next: null,  // This endpoint might not have pagination
+                previous: null,
+            }
+        };
+    }
+    else if (data.items !== undefined && Array.isArray(data.items)) {
+        // Some endpoints use 'items'
+        return {
+            items: data.items,
+            pagination: data.pagination || null
+        };
+    }
+    else if (Array.isArray(data)) {
+        // Direct array response
+        return {
+            items: data,
+            pagination: null
+        };
+    }
+    
+    // Default fallback
     return {
-        items: response.data,
+        items: data,
         pagination: null
     };
 };
