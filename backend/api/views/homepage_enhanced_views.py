@@ -92,13 +92,13 @@ class QuickCategoriesView(APIView):
                 continue
             
             # Calculate popularity metrics
-            score = 0
+            score = 0.0
             
             # 1. Average restaurant rating for this cuisine
             avg_rating = cuisine_restaurants.aggregate(
                 avg_rating=Avg('overall_rating')
-            )['avg_rating'] or 0
-            score += avg_rating * 20  # Weight rating
+            )['avg_rating'] or 0.0
+            score += float(avg_rating) * 20  # Weight rating
             
             # 2. Number of restaurants with this cuisine
             restaurant_count = cuisine_restaurants.count()
@@ -114,8 +114,8 @@ class QuickCategoriesView(APIView):
                 # Average popularity score
                 avg_popularity = menu_items.aggregate(
                     avg_pop=Avg('popularity_score')
-                )['avg_pop'] or 0
-                score += avg_popularity * 0.5
+                )['avg_pop'] or 0.0
+                score += float(avg_popularity) * 0.5
                 
                 # Number of featured items
                 featured_count = menu_items.filter(is_featured=True).count()
@@ -138,7 +138,7 @@ class QuickCategoriesView(APIView):
                 'restaurant_count': restaurant_count,
                 'avg_rating': avg_rating,
                 'metrics': {
-                    'avg_popularity': avg_popularity if 'avg_popularity' in locals() else 0,
+                    'avg_popularity': float(avg_popularity) if 'avg_popularity' in locals() else 0.0,
                     'featured_items': featured_count if 'featured_count' in locals() else 0,
                     'featured_restaurants': featured_restaurants,
                     'verified_restaurants': verified_restaurants
