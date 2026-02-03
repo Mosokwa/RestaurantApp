@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from django.db import models
+from django.core.cache import cache
 
 from ..models import (
     Restaurant, MenuItem, UserBehavior, Customer,
@@ -19,34 +20,287 @@ from ..search_utils import RestaurantSearchEngine, SearchUtils
 
 class QuickCategoriesView(APIView):
     """
-    Get popular food categories for quick access
+    Get popular food categories based on actual popularity data
     """
     permission_classes = [AllowAny]
     
     def get(self, request):
-        # Get categories with restaurant count
-        categories = PopularCategory.objects.filter(
+        # Get location for filtering
+        latitude = request.query_params.get('lat')
+        longitude = request.query_params.get('lng')
+        city = request.query_params.get('city')
+        cache_key = f"popular_categories_{latitude}_{longitude}_{city}"
+        cached_data = cache.get(cache_key)
+
+        if cached_data:
+            return Response(cached_data)
+        
+        # Get popular categories based on actual data
+        categories_data = self._calculate_popular_categories(latitude, longitude, city)
+
+        cache.set(cache_key, categories_data, 3600)
+        
+        return Response(categories_data)
+    
+    def _calculate_popular_categories(self, latitude, longitude, city):
+        """Calculate popular categories based on popularity scores"""
+        from django.db.models import Avg, Count, Sum, Q
+        
+        # Get all active cuisines
+        from ..models import Cuisine, Restaurant, MenuItem
+        
+        # Base restaurant queryset with location filtering
+        restaurants = Restaurant.objects.filter(
+            status='active',
+            branches__is_active=True
+        ).distinct()
+        
+        # Apply location filtering
+        location_filters = {}
+        if latitude and longitude:
+            try:
+                location_filters = {
+                    'latitude': float(latitude),
+                    'longitude': float(longitude),
+                    'radius_km': 50  # Wider radius for categories
+                }
+            except (ValueError, TypeError):
+                pass
+        elif city:
+            location_filters = {'city': city}
+        
+        if location_filters:
+            search_engine = RestaurantSearchEngine(location_filters)
+            restaurant_results, total_count = search_engine.search()
+            restaurant_ids = [result['restaurant'].restaurant_id for result in restaurant_results]
+            restaurants = restaurants.filter(restaurant_id__in=restaurant_ids)
+        
+        # Get all cuisines from filtered restaurants
+        cuisines = Cuisine.objects.filter(
+            restaurants__in=restaurants,
             is_active=True
-        ).prefetch_related('restaurants')
+        ).distinct()
+        
+        # Calculate popularity scores for each cuisine
+        cuisine_scores = []
+        
+        for cuisine in cuisines:
+            # Get restaurants with this cuisine
+            cuisine_restaurants = restaurants.filter(cuisines=cuisine)
+            
+            if not cuisine_restaurants.exists():
+                continue
+            
+            # Calculate popularity metrics
+            score = 0
+            
+            # 1. Average restaurant rating for this cuisine
+            avg_rating = cuisine_restaurants.aggregate(
+                avg_rating=Avg('overall_rating')
+            )['avg_rating'] or 0
+            score += avg_rating * 20  # Weight rating
+            
+            # 2. Number of restaurants with this cuisine
+            restaurant_count = cuisine_restaurants.count()
+            score += restaurant_count * 10
+            
+            # 3. Popularity from menu items
+            menu_items = MenuItem.objects.filter(
+                category__restaurant__in=cuisine_restaurants,
+                is_available=True
+            )
+            
+            if menu_items.exists():
+                # Average popularity score
+                avg_popularity = menu_items.aggregate(
+                    avg_pop=Avg('popularity_score')
+                )['avg_pop'] or 0
+                score += avg_popularity * 0.5
+                
+                # Number of featured items
+                featured_count = menu_items.filter(is_featured=True).count()
+                score += featured_count * 5
+                
+                # Items with high popularity
+                highly_popular = menu_items.filter(popularity_score__gt=50).count()
+                score += highly_popular * 3
+            
+            # 4. Restaurant features
+            featured_restaurants = cuisine_restaurants.filter(is_featured=True).count()
+            score += featured_restaurants * 15
+            
+            verified_restaurants = cuisine_restaurants.filter(is_verified=True).count()
+            score += verified_restaurants * 10
+            
+            cuisine_scores.append({
+                'cuisine': cuisine,
+                'score': score,
+                'restaurant_count': restaurant_count,
+                'avg_rating': avg_rating,
+                'metrics': {
+                    'avg_popularity': avg_popularity if 'avg_popularity' in locals() else 0,
+                    'featured_items': featured_count if 'featured_count' in locals() else 0,
+                    'featured_restaurants': featured_restaurants,
+                    'verified_restaurants': verified_restaurants
+                }
+            })
+        
+        # Sort by score and take top 12
+        cuisine_scores.sort(key=lambda x: x['score'], reverse=True)
+        top_cuisines = cuisine_scores[:12]
         
         # Format response
         categories_data = []
-        for category in categories:
+        for i, cuisine_data in enumerate(top_cuisines):
+            cuisine = cuisine_data['cuisine']
+            
+            # Determine icon based on cuisine name
+            icon = self._get_icon_for_cuisine(cuisine.name)
+            
+            # Determine color based on rank
+            color = self._get_color_for_rank(i)
+            
             categories_data.append({
-                'id': category.category_id,
-                'name': category.name,
-                'icon': category.icon,
-                'color': category.color,
-                'restaurant_count': category.active_restaurant_count,
-                'search_query': category.search_query,
-                'description': category.description,
-                'display_order': category.display_order
+                'id': cuisine.cuisine_id,
+                'name': cuisine.name,
+                'icon': icon,
+                'color': color,
+                'restaurant_count': cuisine_data['restaurant_count'],
+                'search_query': cuisine.name.lower(),
+                'description': cuisine.description or f"Popular {cuisine.name} restaurants",
+                'popularity_score': round(cuisine_data['score'], 1),
+                'avg_rating': round(cuisine_data['avg_rating'], 1),
+                'rank': i + 1,
+                'metrics': cuisine_data['metrics']
             })
         
-        # Sort by display_order
-        categories_data.sort(key=lambda x: (x.get('display_order', 0), x['name']))
+        # If no cuisines with data, return default fallback
+        if not categories_data:
+            categories_data = self._get_default_categories()
         
-        return Response(categories_data)
+        return categories_data
+    
+    def _get_icon_for_cuisine(self, cuisine_name):
+        """Get appropriate icon for cuisine"""
+        icon_map = {
+            'pizza': '🍕',
+            'burger': '🍔',
+            'sushi': '🍣',
+            'pasta': '🍝',
+            'salad': '🥗',
+            'dessert': '🍰',
+            'cake': '🍰',
+            'ice cream': '🍦',
+            'coffee': '☕',
+            'tea': '🍵',
+            'bbq': '🍖',
+            'steak': '🥩',
+            'chicken': '🍗',
+            'fish': '🐟',
+            'seafood': '🦐',
+            'chinese': '🥡',
+            'indian': '🍛',
+            'mexican': '🌮',
+            'italian': '🇮🇹',
+            'thai': '🍜',
+            'japanese': '🇯🇵',
+            'korean': '🍚',
+            'vegetarian': '🥗',
+            'vegan': '🌱',
+            'breakfast': '🍳',
+            'brunch': '🥐',
+            'lunch': '🥪',
+            'dinner': '🍽️',
+            'fast food': '🍟',
+            'street food': '🌭',
+            'bakery': '🥖',
+            'bar': '🍺',
+            'wine': '🍷',
+            'cocktail': '🍸',
+        }
+        
+        cuisine_lower = cuisine_name.lower()
+        
+        # Check for exact matches first
+        if cuisine_lower in icon_map:
+            return icon_map[cuisine_lower]
+        
+        # Check for partial matches
+        for key, icon in icon_map.items():
+            if key in cuisine_lower:
+                return icon
+        
+        # Default icons based on cuisine type
+        if any(word in cuisine_lower for word in ['grill', 'bbq', 'steak', 'meat']):
+            return '🥩'
+        elif any(word in cuisine_lower for word in ['fresh', 'healthy', 'organic']):
+            return '🥗'
+        elif any(word in cuisine_lower for word in ['spicy', 'hot', 'chili']):
+            return '🌶️'
+        elif any(word in cuisine_lower for word in ['sweet', 'candy', 'chocolate']):
+            return '🍫'
+        
+        return '🍽️'  # Default food icon
+    
+    def _get_color_for_rank(self, rank):
+        """Get color based on ranking (top ranks get warmer colors)"""
+        colors = [
+            '#FF6B35',  # 1st - Warm orange
+            '#F8961E',  # 2nd - Orange
+            '#F9C74F',  # 3rd - Yellow
+            '#90BE6D',  # 4th - Green
+            '#43AA8B',  # 5th - Teal
+            '#4D908E',  # 6th - Blue-green
+            '#577590',  # 7th - Blue
+            '#277DA1',  # 8th - Dark blue
+            '#F94144',  # 9th - Red
+            '#F3722C',  # 10th - Orange-red
+            '#7209B7',  # 11th - Purple
+            '#3A86FF',  # 12th - Bright blue
+        ]
+        
+        return colors[rank] if rank < len(colors) else '#4D908E'
+    
+    def _get_default_categories(self):
+        """Fallback default categories if no data"""
+        return [
+            {
+                'id': 1,
+                'name': 'Popular',
+                'icon': '🔥',
+                'color': '#FF6B35',
+                'restaurant_count': 0,
+                'search_query': '',
+                'description': 'Most popular restaurants',
+                'popularity_score': 100,
+                'avg_rating': 4.5,
+                'rank': 1
+            },
+            {
+                'id': 2,
+                'name': 'Highly Rated',
+                'icon': '⭐',
+                'color': '#F9C74F',
+                'restaurant_count': 0,
+                'search_query': 'highly rated',
+                'description': 'Top rated restaurants',
+                'popularity_score': 90,
+                'avg_rating': 4.5,
+                'rank': 2
+            },
+            {
+                'id': 3,
+                'name': 'New',
+                'icon': '🆕',
+                'color': '#4CC9F0',
+                'restaurant_count': 0,
+                'search_query': 'new',
+                'description': 'Recently added restaurants',
+                'popularity_score': 80,
+                'avg_rating': 4.0,
+                'rank': 3
+            }
+        ]
 
 
 class NewRestaurantsView(APIView):
@@ -233,7 +487,7 @@ class DietaryPicksView(APIView):
             return Response({'error': 'Customer profile not found'}, status=status.HTTP_404_NOT_FOUND)
         
         if not dietary_preferences:
-            return Response([])
+            return Response({'restaurants': [], 'dietary_preferences': []})
         
         # Get location
         latitude = request.query_params.get('lat')
@@ -318,8 +572,11 @@ class DietaryPicksView(APIView):
                 'user_preferences': dietary_preferences
             }
         
-        return Response(serializer.data)
-
+        return Response({
+            'restaurants': serializer.data,
+            'dietary_preferences': dietary_preferences,
+            'total_count': len(serializer.data)
+        })
 
 class RecentlyViewedView(APIView):
     """

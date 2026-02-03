@@ -130,7 +130,7 @@ class TrendingDishesView(APIView):
             )
             print(f"Filtered by city: {city}")
         
-        # FIXED: Proper annotation without mixed type errors
+        # Proper annotation without mixed type errors
 
         trending_items = trending_items.annotate(
             recent_order_count=Count(
@@ -156,18 +156,22 @@ class TrendingDishesView(APIView):
             
             items_with_scores.append({
                 'item': item,
-                'trending_score': trending_score
+                'trending_score': trending_score,
+                'recent_orders': order_count,
+                'recent_revenue': revenue
             })
         
         # STEP 3: Sort by trending score
         items_with_scores.sort(key=lambda x: x['trending_score'], reverse=True)
         
         # STEP 4: Take top 12
-        top_items = [item_data['item'] for item_data in items_with_scores[:12]]
+        top_items_data = items_with_scores[:12]
         
         # Create enhanced response with location context
         result = []
-        for item in top_items:
+        for item_data in top_items_data:
+            item = item_data['item']
+            trending_score = item_data['trending_score']
             # Calculate distance if coordinates provided
             distance_km = None
             if latitude and longitude:

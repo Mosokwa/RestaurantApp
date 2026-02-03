@@ -1,6 +1,7 @@
 import math
 from django.db.models import Q
 from geopy.distance import geodesic
+from decimal import Decimal, InvalidOperation
 
 class SearchUtils:
     @staticmethod
@@ -71,7 +72,7 @@ class SearchUtils:
     @staticmethod
     def calculate_relevance_score(restaurant, query, user_location=None):
         """Enhanced relevance scoring with location priority"""
-        score = 0
+        score = 0.0
         
         # Text match scoring (increased weights for better differentiation)
         if query:
@@ -90,17 +91,28 @@ class SearchUtils:
                 score += 40
         
         # Rating scoring (exponential bonus for high ratings)
-        score += (restaurant.overall_rating ** 2) * 15  # 4.5★ gets more than 2× 3.0★
+        rating = getattr(restaurant, 'overall_rating', 0)
+        if rating:
+            try:
+                rating = float(rating)
+                score += (rating ** 2) * 15  # 4.5★ gets more than 2× 3.0★
+            except (ValueError, TypeError):
+                pass
         
         # Featured/verified bonus
-        if restaurant.is_featured:
+        if getattr(restaurant, 'is_featured', False):
             score += 60  # Increased from 50
-        if restaurant.is_verified:
+        if getattr(restaurant, 'is_verified', False):
             score += 40  # Increased from 30
         
         # Review count scoring (logarithmic to prevent domination by large counts)
-        if restaurant.total_reviews > 0:
-            score += min(math.log(restaurant.total_reviews + 1) * 8, 30)
+        total_reviews = getattr(restaurant, 'total_reviews', 0)
+        if total_reviews and total_reviews > 0:
+            try:
+                reviews_score = min(math.log(float(total_reviews) + 1) * 8, 30)
+                score += reviews_score
+            except (ValueError, TypeError):
+                pass
         
         # Location priority scoring if coordinates provided
         if user_location and 'latitude' in user_location and 'longitude' in user_location:

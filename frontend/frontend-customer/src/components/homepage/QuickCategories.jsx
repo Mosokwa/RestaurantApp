@@ -60,6 +60,7 @@ const QuickCategories = () => {
   }
 
   if (!categories || categories.length === 0) {
+    console.log('No categories to display');
     return null;
   }
 
