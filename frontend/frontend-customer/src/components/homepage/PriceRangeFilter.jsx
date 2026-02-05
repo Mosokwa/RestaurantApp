@@ -1,61 +1,80 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-// import './Homepage.css';
+import './Homepage.css';
 
 const PriceRangeFilter = ({ location }) => {
-  const [priceRanges, setPriceRanges] = useState([]);
+  const [selectedRange, setSelectedRange] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeRange, setActiveRange] = useState(null);
-  const navigate = useNavigate();
+  const [ranges, setRanges] = useState([]);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchPriceRanges();
+    fetchPriceRangeData();
   }, [location]);
 
-  const fetchPriceRanges = async () => {
+  const fetchPriceRangeData = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       let url = '/api/homepage/price-ranges/';
-      if (location?.city) url += `?city=${encodeURIComponent(location.city)}`;
+      
+      const params = new URLSearchParams();
+      if (location?.city) params.append('city', location.city);
       if (location?.lat && location?.lng) {
-        url += `${location.city ? '&' : '?'}lat=${location.lat}&lng=${location.lng}`;
+        params.append('lat', location.lat);
+        params.append('lng', location.lng);
       }
+      
+      if (params.toString()) url += `?${params.toString()}`;
 
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch price ranges');
       
       const data = await response.json();
-      setPriceRanges(data);
+      
+      const rangeColors = {
+        '$': { color: '#90BE6D', label: 'Budget Eats' },
+        '$$': { color: '#4D908E', label: 'Mid Range' },
+        '$$$': { color: '#F8961E', label: 'Premium Dining' },
+        '$$$$': { color: '#F94144', label: 'Luxury Experience' }
+      };
+      
+      const formattedRanges = data.map(range => ({
+        id: range.range,
+        range: range.range,
+        label: rangeColors[range.range]?.label || range.label,
+        description: range.description || `$${range.min_price}+ per person`,
+        symbol: range.range,
+        color: rangeColors[range.range]?.color || '#4D908E',
+        minPrice: range.min_price,
+        maxPrice: range.max_price,
+        restaurantCount: range.count
+      }));
+      
+      setRanges(formattedRanges);
     } catch (error) {
-      console.error('Error fetching price ranges:', error);
-      setPriceRanges([]);
+      console.error('Error fetching price range data:', error);
+      setError('Unable to load price ranges');
+      setRanges([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePriceRangeClick = (priceRange) => {
-    setActiveRange(priceRange.range);
-    
-    // Navigate to search with price filter
-    navigate(`/search?min_price=${priceRange.min_price}&max_price=${priceRange.max_price}`);
+  const handleRangeSelect = (rangeId) => {
+    setSelectedRange(rangeId === selectedRange ? null : rangeId);
+    console.log(`Selected price range: ${rangeId}`);
   };
 
-  const getRangeColor = (range) => {
-    switch (range) {
-      case '$': return '#90BE6D'; // Green for budget
-      case '$$': return '#F9C74F'; // Yellow for moderate
-      case '$$$': return '#F8961E'; // Orange for expensive
-      case '$$$$': return '#F94144'; // Red for luxury
-      default: return '#4D908E';
-    }
-  };
-
-  if (loading && priceRanges.length === 0) {
+  if (loading && ranges.length === 0) {
     return (
       <section className="price-range-filter">
-        <h2>Filter by Price</h2>
+        <div className="section-header">
+          <h2>Filter by Price Range</h2>
+          <span className="section-badge">
+            Find your price point
+          </span>
+        </div>
         <div className="price-ranges-container loading">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="price-range-btn skeleton"></div>
@@ -65,32 +84,42 @@ const PriceRangeFilter = ({ location }) => {
     );
   }
 
-  if (priceRanges.length === 0) {
+  if (error || ranges.length === 0) {
     return null;
   }
 
   return (
     <section className="price-range-filter">
-      <h2>Filter by Price</h2>
+      <div className="section-header">
+        <h2>Filter by Price Range</h2>
+        <span className="section-badge">
+          Find your price point
+        </span>
+      </div>
+      
       <div className="price-ranges-container">
-        {priceRanges.map((range) => (
+        {ranges.map((range) => (
           <button
-            key={range.range}
-            className={`price-range-btn ${activeRange === range.range ? 'active' : ''}`}
-            onClick={() => handlePriceRangeClick(range)}
+            key={range.id}
+            className={`price-range-btn ${selectedRange === range.id ? 'active' : ''}`}
+            onClick={() => handleRangeSelect(range.id)}
             style={{
-              '--range-color': getRangeColor(range.range),
-              '--range-hover-color': `${getRangeColor(range.range)}CC`
+              '--range-color': range.color,
             }}
           >
             <div className="price-range-header">
-              <span className="range-symbol">{range.range}</span>
+              <span className="range-symbol" style={{ color: range.color }}>
+                {range.symbol}
+              </span>
               <span className="range-label">{range.label}</span>
             </div>
             <p className="range-description">{range.description}</p>
             <div className="range-stats">
+              <span className="price-display">
+                ${range.minPrice}+
+              </span>
               <span className="restaurant-count">
-                {range.count} {range.count === 1 ? 'restaurant' : 'restaurants'}
+                {range.restaurantCount} {range.restaurantCount === 1 ? 'restaurant' : 'restaurants'}
               </span>
             </div>
           </button>
