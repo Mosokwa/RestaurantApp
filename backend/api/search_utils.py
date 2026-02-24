@@ -6,42 +6,63 @@ from decimal import Decimal, InvalidOperation
 class SearchUtils:
     @staticmethod
     def calculate_distance(lat1, lon1, lat2, lon2):
-        """Calculate distance between two coordinates in kilometers"""
-        if None in [lat1, lon1, lat2, lon2]:
-            return None
-        
+        """
+        Calculate the distance between two points in kilometers using Haversine formula
+        """
         try:
-            return geodesic((lat1, lon1), (lat2, lon2)).kilometers
-        except:
+            # Convert to float if they're strings
+            lat1 = float(lat1)
+            lon1 = float(lon1)
+            lat2 = float(lat2)
+            lon2 = float(lon2)
+            
+            # Radius of the Earth in kilometers
+            R = 6371.0
+            
+            # Convert to radians
+            lat1_rad = math.radians(lat1)
+            lon1_rad = math.radians(lon1)
+            lat2_rad = math.radians(lat2)
+            lon2_rad = math.radians(lon2)
+            
+            # Differences
+            dlat = lat2_rad - lat1_rad
+            dlon = lon2_rad - lon1_rad
+            
+            # Haversine formula
+            a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2)**2
+            c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+            distance = R * c
+            
+            return round(distance, 2)
+        except (ValueError, TypeError) as e:
+            print(f"Error calculating distance: {e}")
             return None
     
     @staticmethod
-    def get_restaurant_branches_nearby(latitude, longitude, radius_km):
-        """Get restaurant branches within radius - OPTIMIZED VERSION"""
-        from .models import Branch, Address
+    def get_restaurant_branches_nearby(lat, lng, radius_km):
+        """
+        Get restaurant branches within radius (simplified - in production use PostGIS)
+        """
+        from .models import Branch
         
-        if latitude is None or longitude is None:
-            return Branch.objects.none()
-        
-        # More efficient approach using database filtering where possible
-        nearby_branches = []
-        all_branches = Branch.objects.filter(
+        # This is a simplified version - in production, use proper geospatial queries
+        branches = Branch.objects.filter(
             is_active=True,
             address__latitude__isnull=False,
             address__longitude__isnull=False
-        ).select_related('address', 'restaurant')
+        ).select_related('restaurant', 'address')
         
-        for branch in all_branches:
-            try:
-                distance = SearchUtils.calculate_distance(
-                    latitude, longitude,
-                    float(branch.address.latitude), float(branch.address.longitude)
-                )
-                if distance is not None and distance <= radius_km:
-                    branch.distance_km = distance
-                    nearby_branches.append(branch)
-            except (ValueError, TypeError):
-                continue
+        # Filter in Python (not efficient for large datasets - use PostGIS in production)
+        nearby_branches = []
+        for branch in branches:
+            distance = SearchUtils.calculate_distance(
+                lat, lng,
+                float(branch.address.latitude),
+                float(branch.address.longitude)
+            )
+            if distance and distance <= radius_km:
+                nearby_branches.append(branch)
         
         return nearby_branches
     

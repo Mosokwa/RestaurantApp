@@ -1,0 +1,299 @@
+.restaurant-card {
+  position: relative;
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.restaurant-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Card Badges */
+.card-badges {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  z-index: 2;
+  flex-wrap: wrap;
+}
+
+.badge {
+  padding: 0.3rem 0.8rem;
+  border-radius: 30px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(4px);
+}
+
+.badge.featured {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #000;
+}
+
+.badge.verified {
+  background: rgba(46, 204, 113, 0.9);
+  color: white;
+}
+
+.badge.closed {
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+}
+
+.badge.near {
+  background: #e63946;
+  color: white;
+}
+
+/* Image Container */
+.card-image-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 66.67%; /* 3:2 Aspect Ratio */
+  background: #2a2a2a;
+  overflow: hidden;
+}
+
+.card-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.5s ease;
+}
+
+.card-image.loaded {
+  opacity: 1;
+}
+
+.restaurant-card:hover .card-image {
+  transform: scale(1.05);
+}
+
+.image-skeleton {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+.offer-badge {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  background: linear-gradient(135deg, #e63946, #c1121f);
+  padding: 0.4rem 1rem;
+  border-radius: 30px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: white;
+  z-index: 2;
+}
+
+/* Card Content */
+.card-content {
+  padding: 1.25rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.restaurant-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.rating-container {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.25rem 0.5rem;
+  border-radius: 30px;
+  white-space: nowrap;
+}
+
+.rating-star {
+  color: #FFD700;
+  font-size: 0.9rem;
+}
+
+.rating-value {
+  font-weight: 600;
+  color: white;
+}
+
+.rating-count {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Restaurant Meta */
+.restaurant-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cuisine-info,
+.location-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.meta-icon {
+  font-size: 0.9rem;
+}
+
+.cuisine-text,
+.distance-text {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.open-badge {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* Restaurant Footer */
+.restaurant-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.price-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.price-level {
+  color: #e63946;
+  font-weight: 600;
+}
+
+.min-order {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.delivery-fee {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Card Actions */
+.card-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 0.6rem;
+  border: none;
+  border-radius: 30px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reserve-btn {
+  background: transparent;
+  border: 1px solid #e63946;
+  color: #e63946;
+}
+
+.reserve-btn:hover {
+  background: rgba(230, 57, 70, 0.1);
+}
+
+.order-btn {
+  background: #e63946;
+  color: white;
+}
+
+.order-btn:hover {
+  background: #c1121f;
+  transform: translateY(-2px);
+}
+
+/* No Results */
+.no-results {
+  padding: 4rem 2rem;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+}
+
+.no-results-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.no-results h3 {
+  font-size: 1.5rem;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.no-results p {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

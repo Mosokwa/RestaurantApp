@@ -4,12 +4,24 @@
     box-sizing: border-box;
 }
 
+#root {
+  overflow-x: hidden;
+  width: 100%;
+  min-height: 100vh;
+}
+
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
+}
+
 body{
-    background: linear-gradient(#131212 30%, #372F2F, #5C5454);
-    min-height: 100vh;
-    color: #ffffff;
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-    line-height: 1.6;
+  background: linear-gradient(#131212 30%, #372F2F, #5C5454);
+  min-height: 100vh;
+  color: #ffffff;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.6;
 }
 
 .loading-container {

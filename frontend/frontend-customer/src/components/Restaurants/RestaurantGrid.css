@@ -1,0 +1,182 @@
+.restaurant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* No Results State */
+.no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 4rem 2rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  margin: 2rem 0;
+}
+
+.no-results-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  display: block;
+  opacity: 0.7;
+}
+
+.no-results h3 {
+  font-size: 1.5rem;
+  color: white;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.no-results p {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1rem;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.no-results-suggestions {
+  margin-top: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.suggestion-chip {
+  padding: 0.6rem 1.2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 30px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.suggestion-chip:hover {
+  background: rgba(230, 57, 70, 0.2);
+  border-color: #e63946;
+  color: white;
+}
+
+/* Grid Empty State */
+.grid-empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 24px;
+  padding: 3rem;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.empty-state-text {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1.1rem;
+  text-align: center;
+  max-width: 400px;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1200px) {
+  .restaurant-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .restaurant-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+  
+  .no-results {
+    padding: 3rem 1.5rem;
+  }
+  
+  .no-results h3 {
+    font-size: 1.25rem;
+  }
+  
+  .no-results-icon {
+    font-size: 3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .restaurant-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .no-results {
+    padding: 2rem 1rem;
+  }
+  
+  .no-results-suggestions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .suggestion-chip {
+    text-align: center;
+  }
+}
+
+/* Animation for cards appearing */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.restaurant-grid > * {
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+/* Stagger animation for cards */
+.restaurant-grid > *:nth-child(1) { animation-delay: 0.05s; }
+.restaurant-grid > *:nth-child(2) { animation-delay: 0.1s; }
+.restaurant-grid > *:nth-child(3) { animation-delay: 0.15s; }
+.restaurant-grid > *:nth-child(4) { animation-delay: 0.2s; }
+.restaurant-grid > *:nth-child(5) { animation-delay: 0.25s; }
+.restaurant-grid > *:nth-child(6) { animation-delay: 0.3s; }
+.restaurant-grid > *:nth-child(7) { animation-delay: 0.35s; }
+.restaurant-grid > *:nth-child(8) { animation-delay: 0.4s; }
+.restaurant-grid > *:nth-child(9) { animation-delay: 0.45s; }
+.restaurant-grid > *:nth-child(10) { animation-delay: 0.5s; }
+
+/* Loading state for grid */
+.restaurant-grid.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Hover effect for grid items */
+.restaurant-grid > * {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.restaurant-grid > *:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+}

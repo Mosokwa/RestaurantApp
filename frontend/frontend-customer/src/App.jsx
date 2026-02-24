@@ -11,6 +11,7 @@ import Signup from './pages/Signup';
 import EmailVerification from './pages/EmailVerification';
 import Restaurants from './pages/Restaurants';
 import csrfService from './services/csrf';
+import RestaurantsExplorer from './pages/RestaurantsExplorer';
 
 function App() {
   useEffect(() =>{
@@ -23,6 +24,25 @@ function App() {
       }
     };
     initializeCSRF();
+  }, []);
+
+  useEffect(() => {
+    // Force viewport recalculation on mobile devices
+    const handleViewport = () => {
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        // Toggle the viewport to force recalculation
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+      }
+    };
+
+    // Run on mount and after a short delay to ensure DOM is ready
+    handleViewport();
+    setTimeout(handleViewport, 100);
+    
+    // Also run on resize
+    window.addEventListener('resize', handleViewport);
+    return () => window.removeEventListener('resize', handleViewport);
   }, []);
 
   return (
@@ -52,7 +72,7 @@ function App() {
             }/>
             <Route path='/restaurants' element={
               <ProtectedRoute>
-                <Restaurants/>
+                <RestaurantsExplorer />
               </ProtectedRoute>
             }/>
           </Route>

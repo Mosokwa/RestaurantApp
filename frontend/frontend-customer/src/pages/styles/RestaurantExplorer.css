@@ -1,0 +1,453 @@
+/* ==========================================================================
+   RESTAURANT EXPLORER - MAIN STYLES
+   ========================================================================== */
+
+.restaurant-explorer {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+  transition: none; /* Remove transition since we're not pushing */
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+}
+
+/* ==========================================================================
+   SIDEBAR INTEGRATION - FIXED
+   ========================================================================== */
+
+/* When sidebar exists - add left margin so content isn't hidden */
+body:has(.sidebar) .restaurant-explorer,
+body:has(.side-bar) .restaurant-explorer,
+.layout .main-content.with-sidebar.with-header .restaurant-explorer {
+  margin-left: 100px !important;  /* Space for collapsed sidebar icons */
+  width: calc(100% - 100px) !important;
+  max-width: calc(1400px - 100px) !important;
+}
+
+
+
+/* Mobile - remove margins */
+@media (max-width: 768px) {
+  body:has(.sidebar) .restaurant-explorer,
+  body:has(.side-bar) .restaurant-explorer,
+  .layout .main-content.with-sidebar.with-header .restaurant-explorer {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem;
+  }
+}
+/* ==========================================================================
+   HERO SECTION
+   ========================================================================== */
+
+.explorer-hero {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 1rem 0.5rem;
+}
+
+.explorer-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.75rem;
+  line-height: 1.2;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #e63946, #ff8c8c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.explorer-subtitle {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ==========================================================================
+   QUICK FILTERS
+   ========================================================================== */
+
+.quick-filters-section {
+  margin-bottom: 2rem;
+}
+
+.quick-filters-scroll {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding: 0.5rem 0 1rem;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.quick-filters-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.quick-filters-scroll::-webkit-scrollbar-thumb {
+  background: rgba(230, 57, 70, 0.5);
+  border-radius: 10px;
+}
+
+.quick-filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 40px;
+  color: white;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-filter-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.quick-filter-chip.active {
+  background: rgba(230, 57, 70, 0.2);
+  border-color: #e63946;
+}
+
+.quick-filter-chip.active .chip-icon {
+  color: #e63946;
+}
+
+.chip-check {
+  margin-left: 0.25rem;
+  color: #e63946;
+  font-weight: bold;
+}
+
+/* ==========================================================================
+   FILTER TOGGLE BAR
+   ========================================================================== */
+
+.filter-toggle-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 50px;
+  flex-wrap: wrap;
+}
+
+.filter-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 30px;
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 110px;
+  justify-content: center;
+}
+
+.filter-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.filter-toggle-btn.active {
+  background: rgba(230, 57, 70, 0.15);
+  border-color: #e63946;
+}
+
+.active-filters-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.active-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.8rem;
+  background: rgba(230, 57, 70, 0.1);
+  border: 1px solid rgba(230, 57, 70, 0.2);
+  border-radius: 30px;
+  color: #e63946;
+  font-size: 0.8rem;
+}
+
+.remove-filter {
+  background: transparent;
+  border: none;
+  color: #e63946;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-filter:hover {
+  background: rgba(230, 57, 70, 0.2);
+}
+
+.clear-filters-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0.3rem 0.6rem;
+}
+
+.clear-filters-btn:hover {
+  color: white;
+}
+
+/* ==========================================================================
+   RESULTS HEADER
+   ========================================================================== */
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.results-count h2 {
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.time-badge {
+  padding: 0.2rem 0.8rem;
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 30px;
+  color: #ffc107;
+  font-size: 0.8rem;
+}
+
+.results-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sort-select {
+  padding: 0.5rem 2rem 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 30px;
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  min-width: 160px;
+}
+
+.sort-select option {
+  background: #1a1a1a;
+  color: white;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.25rem;
+  border-radius: 40px;
+}
+
+.view-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: 30px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.view-btn.active {
+  background: #e63946;
+  color: white;
+}
+
+/* ==========================================================================
+   LOAD MORE
+   ========================================================================== */
+
+.load-more-trigger {
+  padding: 2rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.loading-more {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #e63946;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   DYNAMIC ROWS
+   ========================================================================== */
+
+.dynamic-rows-container {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================================================
+   MOBILE RESPONSIVE
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  .results-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .results-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .sort-select {
+    flex: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Override all sidebar margins on mobile */
+  .restaurant-explorer,
+  body:has(.sidebar) .restaurant-explorer,
+  body:has(.side-bar) .restaurant-explorer,
+  .layout .main-content.with-sidebar.with-header .restaurant-explorer,
+  .layout .main-content.with-sidebar.with-header .restaurant-explorer.sidebar-expanded,
+  .layout .main-content.with-sidebar.with-header .restaurant-explorer:not(.sidebar-expanded) {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem;
+  }
+  
+  .explorer-title {
+    font-size: 2rem;
+  }
+  
+  .filter-toggle-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+  
+  .filter-toggle-btn {
+    width: 100%;
+  }
+  
+  .active-filters-summary {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 0.5rem;
+  }
+  
+  .active-filter-chip {
+    white-space: nowrap;
+  }
+  
+  .view-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .view-btn {
+    flex: 1;
+    max-width: 80px;
+  }
+}
+
+@media (max-width: 480px) {
+  .explorer-title {
+    font-size: 1.5rem;
+  }
+  
+  .explorer-subtitle {
+    font-size: 0.95rem;
+  }
+  
+  .quick-filter-chip {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .results-count h2 {
+    font-size: 1rem;
+  }
+  
+  .sort-select {
+    min-width: 140px;
+    font-size: 0.85rem;
+  }
+}

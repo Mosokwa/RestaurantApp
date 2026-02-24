@@ -1,0 +1,252 @@
+.search-container {
+  position: relative;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.search-form {
+  width: 100%;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(12px);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 60px;
+  transition: all 0.3s ease;
+  height: 60px;
+}
+
+.search-bar.focused {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #e63946;
+  box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.15);
+}
+
+.search-icon-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+  padding: 0.5rem;
+  margin-right: 0.25rem;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  width: 40px;
+  height: 40px;
+}
+
+.search-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.search-icon {
+  font-size: 1.2rem;
+}
+
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 1rem;
+  padding: 0.75rem 0.5rem;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
+}
+
+.search-input:focus::placeholder {
+  opacity: 0.7;
+}
+
+.clear-btn,
+.voice-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.1rem;
+  padding: 0.5rem;
+  margin-left: 0.25rem;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.clear-btn:hover,
+.voice-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.voice-btn {
+  font-size: 1.2rem;
+  position: relative;
+}
+
+.voice-btn.listening {
+  background: #e63946;
+  color: white;
+  animation: pulse 1.5s infinite;
+}
+
+.voice-btn.listening:hover {
+  background: #c1121f;
+}
+
+.search-loading {
+  margin-right: 0.25rem;
+}
+
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #e63946;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Suggestions Dropdown */
+.suggestions-dropdown {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  left: 0;
+  right: 0;
+  max-height: 400px;
+  overflow-y: auto;
+  background: rgba(20, 20, 20, 0.98);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 0.75rem;
+  z-index: 1000;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  gap: 0.75rem;
+}
+
+.suggestion-item:hover,
+.suggestion-item.selected {
+  background: rgba(230, 57, 70, 0.15);
+}
+
+.suggestion-icon {
+  font-size: 1.3rem;
+  min-width: 32px;
+  text-align: center;
+}
+
+.suggestion-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestion-name {
+  display: block;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 0.2rem;
+  font-size: 0.95rem;
+}
+
+.suggestion-meta {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestion-badge {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.6rem;
+  background: rgba(230, 57, 70, 0.2);
+  border: 1px solid rgba(230, 57, 70, 0.3);
+  border-radius: 20px;
+  color: #e63946;
+  font-weight: 500;
+  white-space: nowrap;
+  margin-left: 0.5rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(230, 57, 70, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(230, 57, 70, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(230, 57, 70, 0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .search-bar {
+    height: 54px;
+  }
+  
+  .search-input {
+    font-size: 0.95rem;
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .suggestions-dropdown {
+    max-height: 350px;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-bar {
+    height: 50px;
+  }
+  
+  .search-icon-btn,
+  .clear-btn,
+  .voice-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0.25rem;
+  }
+  
+  .suggestions-dropdown {
+    padding: 0.5rem;
+  }
+  
+  .suggestion-item {
+    padding: 0.6rem 0.75rem;
+  }
+}

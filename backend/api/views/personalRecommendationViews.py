@@ -1,14 +1,18 @@
 from datetime import timedelta
+import logging
+import json
 from django.utils import timezone
 from rest_framework import viewsets, status
 from api.recommendation_engine import RecommendationEngine
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from ..models import Recommendation, Order, UserBehavior, UserPreference, Restaurant, MenuItem
 from ..serializers import (
     PreferenceUpdateSerializer, RecommendationResponseSerializer, TrendingRecommendationSerializer, UserBehaviorSerializer, UserPreferenceSerializer
 )
+
+logger = logging.getLogger(__name__)
 
 class UserBehaviorViewSet(viewsets.ModelViewSet):
     """
@@ -72,124 +76,223 @@ class UserPreferenceView(APIView):
     
 class PersonalizedRecommendationView(APIView):
     """
-    API endpoint for personalized recommendations
+    Get personalized restaurant recommendations based on user behavior
+    Uses the existing UserBehavior model to generate recommendations
     """
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        """Get personalized recommendations for the user"""
-        limit = int(request.query_params.get('limit', 10))
-        location_context = self._get_location_context(request)
-        
-        engine = RecommendationEngine()
-        recommendations = engine.get_personalized_recommendations(
-            request.user, limit, location_context
-        )
-        
-        # Convert to serializable format
-        serialized_items = self._serialize_recommendations(recommendations, request.user, location_context)
-        
-        response_data = {
-            'user_id': request.user.id,
-            'recommendation_type': 'personalized',
-            'items': serialized_items,
-            'generated_at': timezone.now(),
-            'expires_at': timezone.now() + timedelta(hours=24)  # Recommendations expire in 24 hours
-        }
-        
-        # Store the recommendation for future reference
-        self._store_recommendation(request.user, 'personalized', recommendations)
-        
-        serializer = RecommendationResponseSerializer(response_data)
-        return Response(serializer.data)
-    
-    def _get_location_context(self, request):
-        """Extract location context from request"""
-        location_context = {}
-        
-        # Try to get location from query params
-        lat = request.query_params.get('lat')
-        lng = request.query_params.get('lng')
-        
-        if lat and lng:
-            try:
-                location_context['latitude'] = float(lat)
-                location_context['longitude'] = float(lng)
-            except (ValueError, TypeError):
-                pass
-        
-        # Try to get location from user's last order or profile
-        if not location_context:
-            last_order = Order.objects.filter(customer__user=request.user).last()
-            if last_order and last_order.delivery_address:
-                # Extract coordinates from address if available
-                pass
-        
-        return location_context
-    
-    def _serialize_recommendations(self, recommendations, user, location_context, request):
-        """Convert recommendation objects to serializable format"""
-        serialized_items = []
-        
-        for rec in recommendations:
-            item_data = {
-                'item_id': rec['item'].item_id,
-                'name': rec['item'].name,
-                'type': rec['type'],
-                'description': rec['item'].description,
-                'price': rec['item'].price,
-                'restaurant_name': rec['item'].category.restaurant.name,
-                'restaurant_id': rec['item'].category.restaurant.restaurant_id,
-                'score': rec['score'],
-                'reasons': rec.get('reasons', [rec.get('reason', 'Recommended for you')]),
-                'algorithms': rec.get('algorithms', [rec.get('algorithm', 'unknown')]),
+        try:
+            user = request.user
+            limit = int(request.query_params.get('limit', 20))
+            
+            # Get location from query params if available
+            location_context = {
+                'lat': request.query_params.get('lat'),
+                'lng': request.query_params.get('lng'),
+                'city': request.query_params.get('city')
             }
             
-            # Add image if available
-            if rec['item'].image:
-                item_data['image'] = request.build_absolute_uri(rec['item'].image.url)
+            # Get recommendations
+            recommendations = self._get_personalized_recommendations(user, limit)
             
-            # Calculate distance if location context is available
-            if location_context and location_context.get('latitude') and location_context.get('longitude'):
-                from ..search_utils import SearchUtils
-                distance = SearchUtils.calculate_distance(
-                    location_context['latitude'], location_context['longitude'],
-                    rec['item'].category.restaurant.latitude, rec['item'].category.restaurant.longitude
-                )
-                item_data['distance_km'] = distance
+            # Serialize with proper context - FIX: Pass request parameter
+            serialized_items = self._serialize_recommendations(
+                recommendations, 
+                request,  # Pass the entire request object
+                location_context
+            )
             
-            serialized_items.append(item_data)
-        
-        return serialized_items
+            return Response({
+                'recommendations': serialized_items,
+                'total': len(serialized_items),
+                'based_on': self._get_recommendation_basis(user)
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting personalized recommendations: {str(e)}", exc_info=True)
+            return Response(
+                {'error': 'Failed to get recommendations'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
-    def _store_recommendation(self, user, rec_type, recommendations):
-        """Store the generated recommendation in the database"""
-        # Extract restaurant and menu item IDs
-        restaurant_ids = set()
-        menu_item_ids = set()
-        scores = {}
+    def _get_personalized_recommendations(self, user, limit):
+        """Get personalized recommendations based on user behavior history"""
+        from django.db.models import Count, Q, OuterRef, Subquery
+        from ..models import Restaurant, UserBehavior
         
-        for rec in recommendations:
-            if rec['type'] == 'menu_item':
-                menu_item_ids.add(rec['item'].item_id)
-                scores[f"menu_item_{rec['item'].item_id}"] = rec['score']
-                restaurant_ids.add(rec['item'].category.restaurant.restaurant_id)
+        # Get user's behavior history (last 100 interactions)
+        user_behaviors = UserBehavior.objects.filter(
+            user=user
+        ).select_related('restaurant', 'menu_item').order_by('-created_at')[:100]
         
-        # Create recommendation record
-        recommendation = Recommendation.objects.create(
-            user=user,
-            recommendation_type=rec_type,
-            scores=scores,
-            expires_at=timezone.now() + timedelta(hours=24)
+        if not user_behaviors.exists():
+            # No history - return popular restaurants
+            return Restaurant.objects.filter(
+                status='active',
+                is_verified=True
+            ).order_by('-overall_rating', '-total_reviews')[:limit]
+        
+        # Extract preferences from behavior
+        viewed_restaurants = set()
+        ordered_restaurants = set()
+        favorite_restaurants = set()
+        cuisine_preferences = {}
+        
+        for behavior in user_behaviors:
+            if behavior.restaurant:
+                if behavior.behavior_type == 'view':
+                    viewed_restaurants.add(behavior.restaurant.restaurant_id)
+                elif behavior.behavior_type == 'order':
+                    ordered_restaurants.add(behavior.restaurant.restaurant_id)
+                elif behavior.behavior_type == 'favorite':
+                    favorite_restaurants.add(behavior.restaurant.restaurant_id)
+                
+                # Track cuisine preferences from viewed/ordered restaurants
+                for cuisine in behavior.restaurant.cuisines.all():
+                    cuisine_preferences[cuisine.cuisine_id] = (
+                        cuisine_preferences.get(cuisine.cuisine_id, 0) + 1
+                    )
+        
+        # Build recommendation query
+        queryset = Restaurant.objects.filter(
+            status='active',
+            is_verified=True
+        ).exclude(
+            restaurant_id__in=viewed_restaurants  # Don't recommend already viewed
         )
         
-        # Add related items
-        if restaurant_ids:
-            recommendation.recommended_restaurants.add(*restaurant_ids)
-        if menu_item_ids:
-            recommendation.recommended_menu_items.add(*menu_item_ids)
+        # Prioritize based on user preferences
+        if cuisine_preferences:
+            # Get top cuisines
+            top_cuisines = sorted(
+                cuisine_preferences.items(), 
+                key=lambda x: x[1], 
+                reverse=True
+            )[:5]
+            cuisine_ids = [c[0] for c in top_cuisines]
+            
+            # Annotate with matching cuisine count
+            from django.db.models import Count, Case, When, IntegerField
+            
+            queryset = queryset.annotate(
+                matching_cuisines=Count(
+                    Case(
+                        When(cuisines__cuisine_id__in=cuisine_ids, then=1),
+                        output_field=IntegerField()
+                    )
+                ),
+                preference_score=Count(
+                    Case(
+                        When(cuisines__cuisine_id__in=cuisine_ids, then=1),
+                        output_field=IntegerField()
+                    )
+                ) * 2 +  # Weighted by cuisine match
+                Case(
+                    When(restaurant_id__in=favorite_restaurants, then=10),
+                    default=0,
+                    output_field=IntegerField()
+                ) +  # Favorites get +10
+                Case(
+                    When(restaurant_id__in=ordered_restaurants, then=5),
+                    default=0,
+                    output_field=IntegerField()
+                )  # Ordered from get +5
+            ).order_by('-preference_score', '-overall_rating')
+        else:
+            # Default to popular restaurants
+            queryset = queryset.order_by('-overall_rating', '-total_reviews')
         
-        return recommendation
+        return queryset[:limit]
+    
+    def _serialize_recommendations(self, recommendations, request, location_context):
+        """Serialize recommendations with user context"""
+        from ..serializers import RestaurantSerializer
+        
+        result = []
+        for restaurant in recommendations:
+            # Pass request in serializer context
+            serializer = RestaurantSerializer(
+                restaurant, 
+                context={'request': request}
+            )
+            data = serializer.data
+            
+            # Add recommendation reason
+            data['recommendation_reason'] = self._get_recommendation_reason(
+                restaurant, request.user
+            )
+            
+            # Add distance if location provided
+            if location_context.get('lat') and location_context.get('lng'):
+                from ..search_utils import SearchUtils
+                distances = []
+                for branch in restaurant.branches.all():
+                    if (branch.address and branch.address.latitude and 
+                        branch.address.longitude):
+                        dist = SearchUtils.calculate_distance(
+                            float(location_context['lat']),
+                            float(location_context['lng']),
+                            float(branch.address.latitude),
+                            float(branch.address.longitude)
+                        )
+                        if dist:
+                            distances.append(dist)
+                
+                if distances:
+                    data['distance_km'] = round(min(distances), 2)
+            
+            result.append(data)
+        
+        return result
+    
+    def _get_recommendation_reason(self, restaurant, user):
+        """Generate human-readable reason for recommendation"""
+        from ..models import UserBehavior
+        
+        # Check if based on favorite
+        if UserBehavior.objects.filter(
+            user=user,
+            restaurant=restaurant,
+            behavior_type='favorite'
+        ).exists():
+            return "Based on your favorites"
+        
+        # Check if based on cuisine preference
+        recent_cuisines = UserBehavior.objects.filter(
+            user=user,
+            behavior_type__in=['view', 'order']
+        ).exclude(
+            restaurant__isnull=True
+        ).values_list('restaurant__cuisines__name', flat=True).distinct()[:3]
+        
+        matching_cuisines = restaurant.cuisines.filter(
+            name__in=recent_cuisines
+        ).values_list('name', flat=True)
+        
+        if matching_cuisines:
+            return f"Because you like {', '.join(matching_cuisines[:2])}"
+        
+        # Check if popular
+        if restaurant.total_reviews > 100 and restaurant.overall_rating > 4.5:
+            return "Highly rated in your area"
+        
+        return "Recommended for you"
+    
+    def _get_recommendation_basis(self, user):
+        """Get explanation of how recommendations were generated"""
+        from ..models import UserBehavior
+        
+        recent_count = UserBehavior.objects.filter(
+            user=user
+        ).count()
+        
+        if recent_count > 10:
+            return f"Based on your {recent_count} interactions"
+        elif recent_count > 0:
+            return "Based on your recent activity"
+        else:
+            return "Based on popular restaurants in your area"
 
 class TrendingRecommendationView(APIView):
     """
@@ -317,64 +420,187 @@ class SimilarItemsView(APIView):
     
 class TrackUserBehaviorView(APIView):
     """
-    API endpoint for tracking user behaviors
+    Track user interactions for personalization
+    Maps frontend events to the UserBehavior model structure
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]  # Most tracking requires auth
+    
+    # Mapping from frontend event types to model behavior_type
+    EVENT_TYPE_MAPPING = {
+        'page_view': 'view',
+        'restaurant_view': 'view',
+        'restaurant_click': 'view',
+        'menu_item_view': 'view',
+        'search': 'search',
+        'filter_apply': 'search',
+        'order_placed': 'order',
+        'add_to_favorites': 'favorite',
+        'remove_from_favorites': 'favorite',
+        'rating_submitted': 'rating'
+    }
     
     def post(self, request):
-        """Track a user behavior (view, click, etc.)"""
-        behavior_type = request.data.get('behavior_type')
-        restaurant_id = request.data.get('restaurant_id')
-        menu_item_id = request.data.get('menu_item_id')
-        value = request.data.get('value')
-        metadata = request.data.get('metadata', {})
-        
-        # Validate behavior type
-        valid_types = [choice[0] for choice in UserBehavior.BEHAVIOR_TYPES]
-        if behavior_type not in valid_types:
-            return Response(
-                {'error': f'Invalid behavior type. Must be one of: {", ".join(valid_types)}'},
-                status=status.HTTP_400_BAD_REQUEST
+        """
+        Expected payload can be flexible - we'll map it to our model
+        """
+        try:
+            data = request.data
+            user = request.user
+            
+            # Get the frontend event type
+            frontend_event = data.get('event_type')
+            if not frontend_event:
+                return Response(
+                    {'error': 'event_type is required'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Map to model behavior_type
+            behavior_type = self.EVENT_TYPE_MAPPING.get(frontend_event)
+            if not behavior_type:
+                logger.warning(f"Unmapped event type: {frontend_event}")
+                behavior_type = 'view'  # Default to view
+            
+            # Handle restaurant reference
+            restaurant = None
+            restaurant_id = data.get('restaurant_id') or data.get('restaurantId')
+            if restaurant_id:
+                try:
+                    restaurant = Restaurant.objects.get(restaurant_id=restaurant_id)
+                except Restaurant.DoesNotExist:
+                    logger.warning(f"Restaurant not found: {restaurant_id}")
+            
+            # Handle menu item reference
+            menu_item = None
+            menu_item_id = data.get('menu_item_id') or data.get('menuItemId')
+            if menu_item_id:
+                try:
+                    menu_item = MenuItem.objects.get(item_id=menu_item_id)
+                except MenuItem.DoesNotExist:
+                    logger.warning(f"Menu item not found: {menu_item_id}")
+            
+            # Extract value for ratings or order values
+            value = None
+            if behavior_type == 'rating':
+                value = data.get('rating') or data.get('value')
+            elif behavior_type == 'order':
+                value = data.get('order_value') or data.get('value')
+            
+            # Build metadata - store original event and any additional context
+            metadata = {
+                'original_event': frontend_event,
+                'timestamp': data.get('timestamp') or timezone.now().isoformat(),
+                'source': 'restaurant_explorer',
+                'user_agent': request.META.get('HTTP_USER_AGENT', ''),
+                'session_id': request.session.session_key
+            }
+            
+            # Add any additional metadata from request
+            if data.get('metadata'):
+                if isinstance(data['metadata'], dict):
+                    metadata.update(data['metadata'])
+                elif isinstance(data['metadata'], str):
+                    try:
+                        metadata.update(json.loads(data['metadata']))
+                    except:
+                        metadata['metadata_string'] = data['metadata']
+            
+            # Add search query if present
+            if data.get('search_query') or data.get('query'):
+                metadata['search_query'] = data.get('search_query') or data.get('query')
+            
+            # Add filter information
+            if data.get('filters') or data.get('filter_type'):
+                metadata['filters'] = {
+                    'type': data.get('filter_type'),
+                    'value': data.get('filter_value')
+                }
+            
+            # Create the behavior record
+            behavior = UserBehavior.objects.create(
+                user=user,
+                restaurant=restaurant,
+                menu_item=menu_item,
+                behavior_type=behavior_type,
+                value=value,
+                metadata=metadata,
+                created_at=timezone.now()
             )
-        
-        # Create behavior record
-        behavior_data = {
-            'user': request.user,
-            'behavior_type': behavior_type,
-            'value': value,
-            'metadata': metadata
-        }
-        
-        if restaurant_id:
-            try:
-                behavior_data['restaurant'] = Restaurant.objects.get(pk=restaurant_id)
-            except Restaurant.DoesNotExist:
+            
+            logger.info(f"Tracked behavior: {frontend_event} -> {behavior_type} for user {user.id}")
+            
+            return Response({
+                'status': 'success',
+                'behavior_id': behavior.behavior_id,
+                'mapped_type': behavior_type
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Error tracking behavior: {str(e)}", exc_info=True)
+            return Response(
+                {'error': 'Failed to track behavior'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class AnonymousTrackUserBehaviorView(APIView):
+    """
+    Track anonymous user behavior (no authentication required)
+    Stores with null user, can be linked later if user signs up
+    """
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        try:
+            data = request.data
+            frontend_event = data.get('event_type')
+            
+            if not frontend_event:
                 return Response(
-                    {'error': 'Restaurant not found'},
-                    status=status.HTTP_404_NOT_FOUND
+                    {'error': 'event_type is required'},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
-        
-        if menu_item_id:
-            try:
-                behavior_data['menu_item'] = MenuItem.objects.get(pk=menu_item_id)
-            except MenuItem.DoesNotExist:
-                return Response(
-                    {'error': 'Menu item not found'},
-                    status=status.HTTP_404_NOT_FOUND
+            
+            # Map to model behavior_type
+            behavior_type = TrackUserBehaviorView.EVENT_TYPE_MAPPING.get(frontend_event, 'view')
+            
+            # Build metadata with anonymous session info
+            metadata = {
+                'original_event': frontend_event,
+                'timestamp': data.get('timestamp') or timezone.now().isoformat(),
+                'source': 'restaurant_explorer',
+                'user_agent': request.META.get('HTTP_USER_AGENT', ''),
+                'session_id': request.session.session_key or 'anonymous',
+                'anonymous': True
+            }
+            
+            # Add any additional metadata
+            if data.get('metadata'):
+                if isinstance(data['metadata'], dict):
+                    metadata.update(data['metadata'])
+            
+            # Create behavior with null user
+            behavior = UserBehavior.objects.create(
+                user=None,  # Anonymous user
+                behavior_type=behavior_type,
+                metadata=metadata,
+                created_at=timezone.now()
+            )
+            
+            # Store session ID in metadata for later linking
+            if request.session.session_key:
+                request.session['anonymous_behavior_ids'] = (
+                    request.session.get('anonymous_behavior_ids', []) + [behavior.behavior_id]
                 )
-        
-        behavior = UserBehavior.objects.create(**behavior_data)
-        
-        # Trigger preference recalculation for significant behaviors
-        if behavior_type in ['order', 'rating', 'favorite']:
-            try:
-                engine = RecommendationEngine()
-                engine.calculate_user_preferences(request.user)
-            except Exception as e:
-                # Log but don't fail the request
-                print(f"Preference recalculation failed: {e}")
-        
-        return Response({
-            'status': 'behavior_tracked',
-            'behavior_id': behavior.behavior_id
-        }, status=status.HTTP_201_CREATED)
+            
+            return Response({
+                'status': 'success',
+                'behavior_id': behavior.behavior_id
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Error tracking anonymous behavior: {str(e)}")
+            return Response(
+                {'error': 'Failed to track behavior'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
