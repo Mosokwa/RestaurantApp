@@ -3,7 +3,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import {
   searchRestaurants,
-  fetchSuggestions,
   clearSuggestions,
   setSearchQuery,
   updateFilter,
@@ -15,7 +14,6 @@ import {
   setSelectedRestaurant,
   setLocationPermissionDenied,
   setUserLocation,
-  toggleMobileFilter
 } from '../store/slices/explorationSlice';
 import { explorationService } from '../services/explorationService';
 import SearchBar from '../components/Restaurants/SearchBar';
@@ -34,11 +32,12 @@ const RestaurantExplorer = () => {
   const [searchParams] = useSearchParams();
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isFilterCollapsed, setIsFilterCollapsed] = useState(true);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const observerRef = useRef();
   
   // Use mobile detection
-  const { isMobile, isTablet } = useMobileDetect();
+  const { isMobile } = useMobileDetect();
 
   // Check for filter params from homepage
   useEffect(() => {
@@ -101,7 +100,7 @@ const RestaurantExplorer = () => {
     },
     results = { restaurants: [], totalCount: 0, currentPage: 1, loading: false, hasMore: false, error: null },
     suggestions = { items: [], loading: false, showDropdown: false },
-    ui = { activeView: 'grid', isFilterPanelOpen: false, isMobileFilterOpen: false, showLocationPrompt: false, isGettingLocation: false, selectedRestaurant: null },
+    ui = { activeView: 'grid', isFilterPanelOpen: false, showLocationPrompt: false, isGettingLocation: false, selectedRestaurant: null },
     userLocation = { lat: null, lng: null, loading: false, error: null, permissionDenied: false },
     dynamicRows = { 
       trending: { items: [], loading: false, error: null },
@@ -113,10 +112,25 @@ const RestaurantExplorer = () => {
 
   const { isAuthenticated = false } = useSelector(state => state.auth || {});
 
+  // Calculate active filters count for badge
+  const activeFilterCount = {
+    search: !!filters.searchQuery,
+    nearMe: !!filters.nearMeActive,
+    rating: filters.minRating >= 4.5,
+    openNow: !!filters.hours?.isOpenNow,
+    fastDelivery: !!filters.features?.fastDelivery,
+    popular: !!filters.popular,
+    timeBased: !!filters.timeBased,
+    cuisines: (filters.cuisines?.length || 0) > 0,
+    dietary: (filters.dietary?.length || 0) > 0,
+    price: (filters.priceRanges?.length || 0) > 0
+  };
+
+  const activeFilterCountValue = Object.values(activeFilterCount).filter(Boolean).length;
+
   // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
-      // Don't auto-fetch location - let user toggle it
       dispatch(searchRestaurants({ filters, page: 1 }));
       dispatch(fetchTrendingRestaurants());
       
@@ -166,44 +180,48 @@ const RestaurantExplorer = () => {
     return () => observer.disconnect();
   }, [results.hasMore, results.loading, results.currentPage, filters, dispatch]);
 
-  // Handle search
-  const handleSearch = (query) => {
+  // Handle search submit
+  const handleSearch = async (query) => {
     if (!query || !query.trim()) return;
     
     console.log('🔍 Searching for:', query);
     
-    // Update search query in state
     dispatch(setSearchQuery(query));
     
-    // Create updated filters with search query
     const updatedFilters = {
       ...filters,
       searchQuery: query
     };
+
+    console.log('Updated filters:', updatedFilters);
     
-    // Update filter in Redux
     dispatch(updateFilter({ key: 'searchQuery', value: query }));
-    
-    // Clear suggestions
     dispatch(clearSuggestions());
     
-    // Trigger search immediately
-    dispatch(searchRestaurants({ 
-      filters: updatedFilters, 
-      page: 1 
-    })).then((result) => {
-      console.log('📥 Search result:', result);
-      if (result.payload?.items?.length === 0) {
-        console.log('No results found for:', query);
+    // Trigger search and log the result
+    try {
+      const result = await dispatch(searchRestaurants({ 
+        filters: updatedFilters, 
+        page: 1 
+      })).unwrap();
+      
+      console.log('Search result:', result);
+      console.log('Items found:', result.items?.length || 0);
+      
+      if (result.items?.length === 0) {
+        console.log('No restaurants found matching:', query);
+      } else {
+        console.log('Found restaurants:', result.items.map(r => r.name));
       }
-    });
+    } catch (error) {
+      console.error('Search error:', error);
+    }
   };
 
   // Handle input change
   const handleSearchChange = (e) => {
     const value = e.target.value;
     dispatch(setSearchQuery(value));
-    // Don't trigger search on every keystroke
   };
 
   // Handle suggestion select
@@ -211,10 +229,8 @@ const RestaurantExplorer = () => {
     dispatch(clearSuggestions());
     
     if (suggestion.type === 'restaurant') {
-      // Navigate to restaurant detail
       window.location.href = `/restaurants/${suggestion.id}`;
     } else if (suggestion.type === 'cuisine') {
-      // Filter by cuisine
       const updatedFilters = {
         ...filters,
         cuisines: [suggestion.id],
@@ -226,7 +242,6 @@ const RestaurantExplorer = () => {
       dispatch(updateFilter({ key: 'searchQuery', value: suggestion.name }));
       dispatch(searchRestaurants({ filters: updatedFilters, page: 1 }));
     } else if (suggestion.type === 'menu_item') {
-      // Search for menu item
       dispatch(setSearchQuery(suggestion.name));
       dispatch(updateFilter({ key: 'searchQuery', value: suggestion.name }));
       dispatch(searchRestaurants({ 
@@ -236,70 +251,45 @@ const RestaurantExplorer = () => {
     }
   };
 
-
   // Handle quick filter click
   const handleQuickFilter = (filterType) => {
     switch (filterType) {
       case 'near_me':
-        // Toggle near me
         const newNearMeState = !filters.nearMeActive;
         dispatch(updateFilter({ key: 'nearMeActive', value: newNearMeState }));
-        
         if (newNearMeState && !userLocation.lat) {
           dispatch(fetchLocation());
         }
         break;
-        
       case 'high_rating':
-        // Toggle high rating
         const newRating = filters.minRating >= 4.5 ? 0 : 4.5;
         dispatch(updateFilter({ key: 'minRating', value: newRating }));
         break;
-        
       case 'open_now':
-        // Toggle open now
         dispatch(updateFilter({ 
           key: 'hours.isOpenNow', 
           value: !filters.hours?.isOpenNow, 
           nested: true 
         }));
         break;
-        
       case 'fast_delivery':
-        // Toggle fast delivery
         dispatch(updateFilter({ 
           key: 'features.fastDelivery', 
           value: !filters.features?.fastDelivery, 
           nested: true 
         }));
         break;
-        
       case 'popular':
-        // Toggle popular
         const newPopular = !filters.popular;
         dispatch(updateFilter({ key: 'popular', value: newPopular }));
         if (newPopular) {
           dispatch(updateFilter({ key: 'sortBy', value: 'rating' }));
         }
         break;
-        
       case 'time_based':
-        // Toggle time-based
         const newTimeBased = !filters.timeBased;
         dispatch(updateFilter({ key: 'timeBased', value: newTimeBased }));
-        if (newTimeBased) {
-          // Get current time period
-          const hour = new Date().getHours();
-          let period = 'lunch';
-          if (hour < 11) period = 'breakfast';
-          else if (hour < 16) period = 'lunch';
-          else if (hour < 22) period = 'dinner';
-          else period = 'late_night';
-          
-          dispatch(updateFilter({ key: 'timePeriod', value: period }));
-        }
         break;
-        
       default:
         break;
     }
@@ -315,12 +305,6 @@ const RestaurantExplorer = () => {
     }
   };
 
-  // Handle view all from homepage
-  const handleViewAll = (type) => {
-    // This will redirect to this page with the appropriate filter
-    window.location.href = `/restaurants?filter=${type}`;
-  };
-
   // Toggle filter panel
   const toggleFilterPanel = () => {
     setIsFilterCollapsed(!isFilterCollapsed);
@@ -329,7 +313,7 @@ const RestaurantExplorer = () => {
   return (
     <div className="restaurant-explorer">
       <LocationPrompt 
-        isOpen={ui.showLocationPrompt && !userLocation.permissionDenied && filters.nearMeActive}
+        isOpen={ui.showLocationPrompt && !userLocation.permissionDenied}
         onRequestLocation={() => dispatch(fetchLocation())}
         onDismiss={() => dispatch(setLocationPermissionDenied())}
       />
@@ -352,7 +336,6 @@ const RestaurantExplorer = () => {
           onClear={() => {
             dispatch(setSearchQuery(''));
             dispatch(updateFilter({ key: 'searchQuery', value: '' }));
-            // Refresh without search query
             const { searchQuery, ...filtersWithoutSearch } = filters;
             dispatch(searchRestaurants({ filters: filtersWithoutSearch, page: 1 }));
           }}
@@ -384,7 +367,6 @@ const RestaurantExplorer = () => {
             <span>Filters</span>
             <span className="filter-arrow">{isFilterCollapsed ? '▼' : '▲'}</span>
           </button>
-          
           <div className="active-filters-summary">
             {filters.searchQuery && (
               <span className="active-filter-chip">
@@ -478,14 +460,7 @@ const RestaurantExplorer = () => {
               </span>
             )}
             
-            {(filters.searchQuery || 
-              filters.nearMeActive || 
-              filters.minRating > 0 || 
-              filters.hours?.isOpenNow ||
-              filters.features?.fastDelivery ||
-              filters.popular ||
-              filters.timeBased ||
-              filters.cuisines?.length > 0) && (
+            {activeFilterCountValue > 0 && (
               <button className="clear-filters-btn" onClick={() => dispatch(resetFilters())}>
                 Clear All
               </button>
@@ -493,7 +468,7 @@ const RestaurantExplorer = () => {
           </div>
         </div>
 
-        {!isFilterCollapsed && !isMobile && (
+        {!isFilterCollapsed && (
           <FilterPanelInline
             filters={filters}
             onFilterChange={(key, value, nested) => 
@@ -504,6 +479,7 @@ const RestaurantExplorer = () => {
           />
         )}
 
+        {/* ===== RESULTS HEADER - This is the div you were looking for ===== */}
         <div className="results-header">
           <div className="results-count">
             <h2>
@@ -516,6 +492,11 @@ const RestaurantExplorer = () => {
                 </span>
               )}
             </h2>
+            {userLocation.lat && filters.nearMeActive && (
+              <span className="location-badge">
+                📍 Near you
+              </span>
+            )}
           </div>
           
           <div className="results-controls">
@@ -533,9 +514,22 @@ const RestaurantExplorer = () => {
               <option value="rating">Highest Rated</option>
               <option value="price_low">Price: Low to High</option>
               <option value="price_high">Price: High to Low</option>
-              <option value="delivery_time">Delivery Time</option>
             </select>
 
+            {/* Mobile Filter Button */}
+            <button 
+              className="mobile-filter-btn glass-card"
+              onClick={() => setIsMobileFilterOpen(true)}
+              aria-label="Open filters"
+            >
+              <span className="filter-icon">⚙️</span>
+              <span className="filter-text">Filters</span>
+              {activeFilterCountValue > 0 && (
+                <span className="filter-badge">{activeFilterCountValue}</span>
+              )}
+            </button>
+
+            {/* Desktop View Toggle */}
             {!isMobile && (
               <div className="view-toggle">
                 <button 
@@ -557,6 +551,7 @@ const RestaurantExplorer = () => {
           </div>
         </div>
 
+        {/* Restaurant Grid */}
         {results.loading && (!results.restaurants || results.restaurants.length === 0) ? (
           <LoadingSkeleton />
         ) : (
@@ -565,8 +560,10 @@ const RestaurantExplorer = () => {
               restaurants={results.restaurants || []}
               onRestaurantClick={handleRestaurantClick}
               userLocation={userLocation}
+              searchQuery={searchQuery}
             />
 
+            {/* Infinite Scroll Trigger */}
             {results.hasMore && (
               <div ref={observerRef} className="load-more-trigger">
                 {isLoadingMore && (
@@ -581,6 +578,7 @@ const RestaurantExplorer = () => {
         )}
       </div>
 
+      {/* Dynamic Rows Section */}
       {!isMobile && (
         <div className="dynamic-rows-container">
           <DynamicRow
@@ -590,7 +588,6 @@ const RestaurantExplorer = () => {
             onRestaurantClick={handleRestaurantClick}
             viewAllLink="/restaurants?filter=popular"
             type="trending"
-            onViewAll={() => handleViewAll('popular')}
           />
 
           {userLocation.lat && filters.nearMeActive && (
@@ -601,7 +598,6 @@ const RestaurantExplorer = () => {
               onRestaurantClick={handleRestaurantClick}
               viewAllLink="/restaurants?filter=near_you"
               type="nearby"
-              onViewAll={() => handleViewAll('near_you')}
             />
           )}
 
@@ -613,22 +609,22 @@ const RestaurantExplorer = () => {
               onRestaurantClick={handleRestaurantClick}
               viewAllLink="/restaurants?filter=recommended"
               type="personalized"
-              onViewAll={() => handleViewAll('recommended')}
             />
           )}
         </div>
       )}
 
+      {/* Mobile Filter Drawer */}
       <MobileFilterDrawer
-        isOpen={ui.isMobileFilterOpen || false}
-        onClose={() => dispatch(toggleMobileFilter())}
+        isOpen={isMobileFilterOpen}
+        onClose={() => setIsMobileFilterOpen(false)}
         filters={filters}
         onFilterChange={(key, value, nested) => 
           dispatch(updateFilter({ key, value, nested }))
         }
         onReset={() => dispatch(resetFilters())}
         onApply={() => {
-          dispatch(toggleMobileFilter());
+          setIsMobileFilterOpen(false);
           dispatch(searchRestaurants({ filters, page: 1 }));
         }}
       />

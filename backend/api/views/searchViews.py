@@ -10,175 +10,234 @@ from ..serializers import (
     MenuItemSearchSerializer, RestaurantSearchSerializer, SearchFilterSerializer, SearchSuggestionSerializer, RestaurantSerializer
 )
 import logging
+import json
+import traceback
 
 logger = logging.getLogger(__name__)
 
 class ComprehensiveSearchView(APIView):
     """
-    Comprehensive search endpoint - FIXED to match suggestion logic
+    Comprehensive search endpoint
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [AllowAny]
     
     def get(self, request):
-        # Validate and parse filters
-        filter_serializer = SearchFilterSerializer(data=request.query_params)
-        if not filter_serializer.is_valid():
-            return Response(filter_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # Get all query parameters
+        query = request.query_params.get('q', '').strip()
+        latitude = request.query_params.get('lat')
+        longitude = request.query_params.get('lng')
+        radius = float(request.query_params.get('radius', 10))
+        min_rating = request.query_params.get('min_rating')
+        cuisine = request.query_params.get('cuisine', '')
+        price_range = request.query_params.get('price_range', '')
+        dietary = request.query_params.get('dietary', '')
+        sort_by = request.query_params.get('sort_by', 'relevance')
+        is_open_now = request.query_params.get('is_open_now', 'false').lower() == 'true'
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
         
-        filters = filter_serializer.validated_data
-        query = filters.get('query', '').strip()
+        logger.info(f"Search - Query: '{query}'")
         
-        logger.info(f"Search query: '{query}'")
-        
-        # Start with active restaurants
+        # Start with all active restaurants
         queryset = Restaurant.objects.filter(status='active').prefetch_related(
             'cuisines', 'branches', 'branches__address'
         )
         
-        # ========== TEXT SEARCH - MAKE IT MATCH SUGGESTIONS ==========
+        # ========== TEXT SEARCH ==========
         if query:
-            # Split into individual terms (just like suggestions do)
-            search_terms = query.split()
-            q_objects = Q()
-            
-            for term in search_terms:
-                if len(term) < 2:  # Skip very short terms
-                    continue
-                    
-                # Search in restaurant name, description, AND cuisine names
-                q_objects |= Q(name__icontains=term)
-                q_objects |= Q(description__icontains=term)
-                q_objects |= Q(cuisines__name__icontains=term)
-            
-            if q_objects:
-                queryset = queryset.filter(q_objects).distinct()
-                logger.info(f"Found {queryset.count()} restaurants matching '{query}'")
+            try:
+                # Split into terms
+                search_terms = query.split()
                 
-                # Debug: log the first few matches
-                if queryset.count() > 0:
-                    for r in queryset[:5]:
-                        cuisines = [c.name for c in r.cuisines.all()]
-                        logger.info(f"  Match: {r.name} - Cuisines: {cuisines}")
-            else:
-                logger.info(f"No restaurants found matching '{query}'")
+                # Create Q objects for different search types
+                # IMPORTANT: We're using django.db.models.Q directly
+                from django.db.models import Q as DjangoQ
+                
+                name_condition = DjangoQ()
+                
+                for term in search_terms:
+                    if len(term) >= 2:
+                        name_condition |= DjangoQ(name__icontains=term)
+                
+                # Find restaurants by cuisine
+                cuisine_ids = []
+                try:
+                    cuisine_ids = list(Cuisine.objects.filter(
+                        name__icontains=query
+                    ).values_list('cuisine_id', flat=True))
+                except Exception as e:
+                    logger.error(f"Error finding cuisines: {e}")
+                
+                # Find restaurants by menu items
+                restaurant_ids_by_menu = []
+                try:
+                    restaurant_ids_by_menu = list(MenuItem.objects.filter(
+                        name__icontains=query,
+                        is_available=True
+                    ).values_list('category__restaurant_id', flat=True).distinct())
+                except Exception as e:
+                    logger.error(f"Error finding menu items: {e}")
+                
+                # Build final search condition
+                search_condition = name_condition
+                
+                if cuisine_ids:
+                    search_condition |= DjangoQ(cuisines__cuisine_id__in=cuisine_ids)
+                
+                if restaurant_ids_by_menu:
+                    search_condition |= DjangoQ(restaurant_id__in=restaurant_ids_by_menu)
+                
+                # Apply filter
+                if search_condition:
+                    queryset = queryset.filter(search_condition).distinct()
+                    
+            except Exception as e:
+                logger.error(f"Error in text search: {e}")
+                traceback.print_exc()
+        
+        # ========== CUISINE FILTER ==========
+        if cuisine:
+            cuisine_list = [c.strip() for c in cuisine.split(',') if c.strip()]
+            if cuisine_list:
+                queryset = queryset.filter(cuisines__name__in=cuisine_list).distinct()
+        
+        # ========== PRICE RANGE FILTER ==========
+        if price_range:
+            price_levels = [p.strip() for p in price_range.split(',') if p.strip()]
+            if price_levels:
+                # If you have price_level field
+                queryset = queryset.filter(price_level__in=price_levels)
+        
+        # ========== DIETARY FILTER ==========
+        if dietary:
+            dietary_list = [d.strip() for d in dietary.split(',') if d.strip()]
+            if dietary_list:
+                from django.db.models import Q as DjangoQ
+                diet_condition = DjangoQ()
+                
+                if 'vegetarian' in dietary_list:
+                    diet_condition |= DjangoQ(menu_items__is_vegetarian=True)
+                if 'vegan' in dietary_list:
+                    diet_condition |= DjangoQ(menu_items__is_vegan=True)
+                if 'gluten_free' in dietary_list:
+                    diet_condition |= DjangoQ(menu_items__is_gluten_free=True)
+                
+                if diet_condition:
+                    restaurant_ids_with_diet = MenuItem.objects.filter(
+                        diet_condition,
+                        is_available=True,
+                        category__restaurant__status='active'
+                    ).values_list('category__restaurant_id', flat=True).distinct()
+                    
+                    if restaurant_ids_with_diet:
+                        queryset = queryset.filter(restaurant_id__in=restaurant_ids_with_diet)
+        
+        # ========== RATING FILTER ==========
+        if min_rating:
+            try:
+                min_rating = float(min_rating)
+                queryset = queryset.filter(overall_rating__gte=min_rating)
+            except ValueError:
+                pass
         
         # ========== LOCATION FILTER ==========
-        latitude = filters.get('latitude')
-        longitude = filters.get('longitude')
-        radius_km = filters.get('radius_km', 10)
-        
         if latitude and longitude:
             try:
-                # Get branches within radius
+                latitude = float(latitude)
+                longitude = float(longitude)
+                
+                from ..search_utils import SearchUtils
                 nearby_branches = SearchUtils.get_restaurant_branches_nearby(
-                    latitude, longitude, radius_km
+                    latitude, longitude, radius
                 )
-                restaurant_ids = [branch.restaurant_id for branch in nearby_branches]
-                queryset = queryset.filter(restaurant_id__in=restaurant_ids)
-                logger.info(f"Location filter applied: {len(restaurant_ids)} restaurants within {radius_km}km")
+                restaurant_ids = [b.restaurant_id for b in nearby_branches]
+                if restaurant_ids:
+                    queryset = queryset.filter(restaurant_id__in=restaurant_ids)
             except Exception as e:
                 logger.error(f"Location filter error: {e}")
         
-        # ========== CUISINE FILTER ==========
-        cuisine_param = filters.get('cuisine')
-        if cuisine_param:
-            cuisine_ids = [int(id.strip()) for id in cuisine_param.split(',') if id.strip().isdigit()]
-            if cuisine_ids:
-                queryset = queryset.filter(cuisines__cuisine_id__in=cuisine_ids).distinct()
-        
-        # ========== RATING FILTER ==========
-        min_rating = filters.get('min_rating', 0)
-        if min_rating and min_rating > 0:
-            queryset = queryset.filter(overall_rating__gte=min_rating)
-        
-        # ========== PRICE RANGE FILTER ==========
-        price_range = filters.get('price_range')
-        if price_range:
-            # This depends on how you store price ranges
-            price_ranges = price_range.split(',')
-            # Add your price filter logic here
-        
-        # ========== DIETARY FILTER ==========
-        dietary = filters.get('dietary_preferences', [])
-        if dietary:
-            # This would filter menu items, but for restaurants you might filter by tags
-            # Add your dietary filter logic here
-            pass
-        
         # ========== OPEN NOW FILTER ==========
-        is_open_now = filters.get('is_open_now', False)
         if is_open_now:
-            # Filter restaurants that have at least one branch open now
-            from django.utils import timezone
-            now = timezone.now()
-            current_day = now.strftime('%A').lower()
-            current_time = now.strftime('%H:%M')
-            
-            # This is a simplified version - you might need a more complex query
-            queryset = queryset.filter(
-                branches__is_active=True,
-                branches__operating_hours__contains={current_day: {'open__lte': current_time, 'close__gte': current_time}}
-            ).distinct()
+            try:
+                from django.utils import timezone
+                
+                now = timezone.now()
+                current_day = now.strftime('%A').lower()
+                current_time = now.strftime('%H:%M')
+                
+                # Get all restaurants and filter in Python
+                all_restaurants = list(queryset)
+                open_restaurant_ids = []
+                
+                for restaurant in all_restaurants:
+                    for branch in restaurant.branches.all():
+                        try:
+                            hours = branch.operating_hours
+                            if isinstance(hours, str):
+                                hours = json.loads(hours)
+                            
+                            day_hours = hours.get(current_day, {})
+                            open_time = day_hours.get('open', '00:00')
+                            close_time = day_hours.get('close', '23:59')
+                            
+                            if open_time <= current_time <= close_time:
+                                open_restaurant_ids.append(restaurant.restaurant_id)
+                                break
+                        except Exception:
+                            continue
+                
+                if open_restaurant_ids:
+                    queryset = queryset.filter(restaurant_id__in=open_restaurant_ids)
+                else:
+                    queryset = Restaurant.objects.none()
+            except Exception as e:
+                logger.error(f"Open now filter error: {e}")
         
         # ========== SORTING ==========
-        sort_by = filters.get('sort_by', 'relevance')
-        
         if sort_by == 'rating':
             queryset = queryset.order_by('-overall_rating', '-total_reviews')
-        elif sort_by == 'distance' and latitude and longitude:
-            # Distance sorting would require annotation
-            # For now, just order by relevance
-            queryset = queryset.order_by('-is_featured', '-overall_rating')
         elif sort_by == 'price_low':
-            queryset = queryset.order_by('price_range')  # If you have price_range field
+            queryset = queryset.order_by('price_level')
         elif sort_by == 'price_high':
-            queryset = queryset.order_by('-price_range')
+            queryset = queryset.order_by('-price_level')
         else:  # relevance
-            if query:
-                # Boost restaurants that match search terms in name
-                queryset = queryset.annotate(
-                    name_match=Count(Case(
-                        When(name__icontains=query, then=1),
-                        output_field=IntegerField()
-                    )) * 2
-                ).order_by('-name_match', '-is_featured', '-overall_rating')
-            else:
-                queryset = queryset.order_by('-is_featured', '-overall_rating')
+            queryset = queryset.order_by('-is_featured', '-overall_rating')
         
         # ========== PAGINATION ==========
-        page = filters.get('page', 1)
-        page_size = filters.get('page_size', 20)
+        total_count = queryset.count()
         start = (page - 1) * page_size
         end = start + page_size
-        
-        total_count = queryset.count()
         paginated_restaurants = queryset[start:end]
         
         # ========== SERIALIZE ==========
+        from ..serializers import RestaurantSearchSerializer
         serializer = RestaurantSearchSerializer(
             paginated_restaurants, 
             many=True, 
             context={'request': request}
         )
         
-        # Add distance information if location provided
+        # Add distance if location provided
         restaurant_data = serializer.data
         if latitude and longitude:
-            for i, restaurant in enumerate(paginated_restaurants):
-                # Calculate distance to nearest branch
-                distances = []
-                for branch in restaurant.branches.all():
-                    if branch.address and branch.address.latitude and branch.address.longitude:
-                        dist = SearchUtils.calculate_distance(
-                            latitude, longitude,
-                            float(branch.address.latitude),
-                            float(branch.address.longitude)
-                        )
-                        if dist:
-                            distances.append(dist)
-                
-                if distances and i < len(restaurant_data):
-                    restaurant_data[i]['distance_km'] = round(min(distances), 2)
+            try:
+                from ..search_utils import SearchUtils
+                for i, restaurant in enumerate(paginated_restaurants):
+                    distances = []
+                    for branch in restaurant.branches.all():
+                        if branch.address and branch.address.latitude and branch.address.longitude:
+                            dist = SearchUtils.calculate_distance(
+                                latitude, longitude,
+                                float(branch.address.latitude),
+                                float(branch.address.longitude)
+                            )
+                            if dist:
+                                distances.append(dist)
+                    
+                    if distances and i < len(restaurant_data):
+                        restaurant_data[i]['distance_km'] = round(min(distances), 2)
+            except Exception as e:
+                logger.error(f"Distance calculation error: {e}")
         
         response_data = {
             'results': restaurant_data,
@@ -188,72 +247,411 @@ class ComprehensiveSearchView(APIView):
             'total_pages': (total_count + page_size - 1) // page_size
         }
         
-        logger.info(f"Returning {len(restaurant_data)} results out of {total_count} total")
+        logger.info(f"Returning {len(restaurant_data)} of {total_count} restaurants")
         
         return Response(response_data)
 
 class SearchSuggestionsView(APIView):
     """
     Provide search suggestions for autocomplete
+    Returns restaurants, cuisines, and menu items matching the query
     """
     permission_classes = [AllowAny]
     
     def get(self, request):
-        query = request.query_params.get('q', '').strip().lower()
-        limit = int(request.query_params.get('limit', 10))
+        # Get query parameter - handle both ?q=query and ?q[query]=query formats
+        query = request.query_params.get('q', '')
+        if not query and 'q[query]' in request.query_params:
+            query = request.query_params.get('q[query]', '')
+        
+        query = query.strip()
+        limit = int(request.query_params.get('limit', 8))
+        filter_type = request.query_params.get('type', '')  # Optional: restaurant, cuisine, menu_item
+        
+        logger.info(f"Search suggestions - Query: '{query}', Limit: {limit}, Type: {filter_type}")
         
         if not query or len(query) < 2:
             return Response({'suggestions': []})
         
         suggestions = []
         
-        # Restaurant name suggestions
+        # ========== 1. RESTAURANT SUGGESTIONS ==========
+        if not filter_type or filter_type == 'restaurant':
+            restaurant_matches = Restaurant.objects.filter(
+                name__icontains=query,
+                status='active'
+            ).prefetch_related('cuisines')[:5]
+            
+            for restaurant in restaurant_matches:
+                # Get cuisine names for display
+                cuisine_names = [c.name for c in restaurant.cuisines.all()[:3]]
+                cuisine_text = ', '.join(cuisine_names) if cuisine_names else 'Restaurant'
+                
+                suggestions.append({
+                    'type': 'restaurant',
+                    'name': restaurant.name,
+                    'id': restaurant.restaurant_id,
+                    'cuisine': cuisine_text,
+                    'rating': float(restaurant.overall_rating) if restaurant.overall_rating else None,
+                    'match_type': 'direct'
+                })
+        
+        # ========== 2. RESTAURANTS BY CUISINE ==========
+        if not filter_type or filter_type == 'restaurant':
+            # Find cuisines matching the query
+            cuisine_matches = Cuisine.objects.filter(
+                name__icontains=query,
+                is_active=True
+            )
+            
+            if cuisine_matches.exists():
+                # Get restaurants that have these cuisines
+                cuisine_restaurants = Restaurant.objects.filter(
+                    cuisines__in=cuisine_matches,
+                    status='active'
+                ).distinct().prefetch_related('cuisines')[:3]
+                
+                for restaurant in cuisine_restaurants:
+                    # Skip if already added as direct match
+                    if any(s.get('id') == restaurant.restaurant_id for s in suggestions if s.get('type') == 'restaurant'):
+                        continue
+                    
+                    # Get the matching cuisine name
+                    matching_cuisines = [c.name for c in restaurant.cuisines.all() if query.lower() in c.name.lower()]
+                    cuisine_text = matching_cuisines[0] if matching_cuisines else 'Related cuisine'
+                    
+                    suggestions.append({
+                        'type': 'restaurant',
+                        'name': restaurant.name,
+                        'id': restaurant.restaurant_id,
+                        'cuisine': f"Serves {cuisine_text}",
+                        'rating': float(restaurant.overall_rating) if restaurant.overall_rating else None,
+                        'match_type': 'by_cuisine'
+                    })
+        
+        # ========== 3. RESTAURANTS BY MENU ITEMS ==========
+        if not filter_type or filter_type == 'restaurant':
+            # Find menu items matching the query
+            menu_item_matches = MenuItem.objects.filter(
+                name__icontains=query,
+                is_available=True,
+                category__restaurant__status='active'
+            ).select_related('category__restaurant').prefetch_related('category__restaurant__cuisines')[:5]
+            
+            seen_ids = set([s.get('id') for s in suggestions if s.get('type') == 'restaurant' and s.get('id')])
+            
+            for item in menu_item_matches:
+                restaurant = item.category.restaurant
+                if restaurant.restaurant_id in seen_ids:
+                    continue
+                
+                seen_ids.add(restaurant.restaurant_id)
+                
+                # Get cuisine names
+                cuisine_names = [c.name for c in restaurant.cuisines.all()[:2]]
+                cuisine_text = ', '.join(cuisine_names) if cuisine_names else ''
+                
+                suggestions.append({
+                    'type': 'restaurant',
+                    'name': restaurant.name,
+                    'id': restaurant.restaurant_id,
+                    'cuisine': cuisine_text,
+                    'rating': float(restaurant.overall_rating) if restaurant.overall_rating else None,
+                    'menu_item': item.name,
+                    'match_type': 'by_menu_item'
+                })
+        
+        # ========== 4. CUISINE SUGGESTIONS ==========
+        if filter_type == 'cuisine' or filter_type == '':
+            cuisine_suggestions = Cuisine.objects.filter(
+                name__icontains=query,
+                is_active=True
+            )[:3]
+            
+            for cuisine in cuisine_suggestions:
+                # Count restaurants serving this cuisine
+                restaurant_count = Restaurant.objects.filter(
+                    cuisines=cuisine,
+                    status='active'
+                ).count()
+                
+                suggestions.append({
+                    'type': 'cuisine',
+                    'name': cuisine.name,
+                    'id': cuisine.cuisine_id,
+                    'cuisine_name': cuisine.name,
+                    'restaurant_count': restaurant_count
+                })
+        
+        # ========== 5. MENU ITEM SUGGESTIONS ==========
+        if filter_type == 'menu_item' or filter_type == '':
+            menu_suggestions = []
+            for item in menu_item_matches[:3]:  # Reuse from above
+                menu_suggestions.append({
+                    'type': 'menu_item',
+                    'name': item.name,
+                    'id': item.item_id,
+                    'restaurant_name': item.category.restaurant.name,
+                    'price': str(item.price) if item.price else None
+                })
+            suggestions.extend(menu_suggestions)
+        
+        # Sort suggestions: restaurants first, then cuisines, then menu items
+        def sort_key(s):
+            if s['type'] == 'restaurant':
+                match_priority = {'direct': 0, 'by_cuisine': 1, 'by_menu_item': 2}.get(s.get('match_type'), 3)
+                return (0, match_priority)
+            elif s['type'] == 'cuisine':
+                return (1, 0)
+            else:  # menu_item
+                return (2, 0)
+        
+        suggestions.sort(key=sort_key)
+        
+        # Limit total results
+        suggestions = suggestions[:limit]
+        
+        logger.info(f"Returning {len(suggestions)} suggestions")
+        
+        serializer = SearchSuggestionSerializer(suggestions, many=True)
+        return Response({'suggestions': serializer.data})
+
+class RestaurantSuggestionsView(APIView):
+    """
+    Search suggestions for restaurants only
+    Used in the restaurant explorer page
+    Returns restaurants based on name, cuisine, or menu items
+    """
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        query = request.query_params.get('q', '').strip()
+        limit = int(request.query_params.get('limit', 8))
+
+        print("="*50)
+        print(f"RestaurantSuggestionsView - Query: '{query}'")
+        print(f"Limit: {limit}")
+        
+        logger.info(f"Restaurant suggestions - Query: '{query}'")
+        
+        if not query or len(query) < 2:
+            print("Query too short, returning empty")
+            return Response({'suggestions': []})
+        
+        suggestions = []
+        seen_restaurant_ids = set()
+        
+        # ========== 1. DIRECT RESTAURANT NAME MATCHES ==========
         restaurant_matches = Restaurant.objects.filter(
             name__icontains=query,
             status='active'
-        )[:5]
+        ).prefetch_related('cuisines')[:5]
         
         for restaurant in restaurant_matches:
+            seen_restaurant_ids.add(restaurant.restaurant_id)
+            
+            # Get cuisine names for display
+            cuisine_names = [c.name for c in restaurant.cuisines.all()[:3]]
+            cuisine_text = ', '.join(cuisine_names) if cuisine_names else 'Restaurant'
+            
             suggestions.append({
                 'type': 'restaurant',
                 'name': restaurant.name,
-                'id': restaurant.restaurant_id
+                'id': restaurant.restaurant_id,
+                'cuisine': cuisine_text,
+                'rating': float(restaurant.overall_rating) if restaurant.overall_rating else None,
+                'match_type': 'direct'
             })
+        
+        # ========== 2. RESTAURANTS BY CUISINE ==========
+        cuisine_matches = Cuisine.objects.filter(
+            name__icontains=query,
+            is_active=True
+        )
+        
+        if cuisine_matches.exists():
+            restaurants_by_cuisine = Restaurant.objects.filter(
+                cuisines__in=cuisine_matches,
+                status='active'
+            ).distinct().prefetch_related('cuisines')[:5]
+            
+            for restaurant in restaurants_by_cuisine:
+                if restaurant.restaurant_id in seen_restaurant_ids:
+                    continue
+                    
+                seen_restaurant_ids.add(restaurant.restaurant_id)
+                
+                # Get the matching cuisine name
+                matching_cuisines = [c.name for c in restaurant.cuisines.all() if query.lower() in c.name.lower()]
+                cuisine_text = matching_cuisines[0] if matching_cuisines else 'Restaurant'
+                
+                suggestions.append({
+                    'type': 'restaurant',
+                    'name': restaurant.name,
+                    'id': restaurant.restaurant_id,
+                    'cuisine': f"Serves {cuisine_text}",
+                    'rating': float(restaurant.overall_rating) if restaurant.overall_rating else None,
+                    'match_type': 'by_cuisine'
+                })
+        
+        # ========== 3. RESTAURANTS BY MENU ITEMS ==========
+        menu_item_matches = MenuItem.objects.filter(
+            name__icontains=query,
+            is_available=True,
+            category__restaurant__status='active'
+        ).select_related('category__restaurant').prefetch_related('category__restaurant__cuisines')[:5]
+        
+        for item in menu_item_matches:
+            restaurant = item.category.restaurant
+            if restaurant.restaurant_id in seen_restaurant_ids:
+                continue
+                
+            seen_restaurant_ids.add(restaurant.restaurant_id)
+            
+            # Get cuisine names
+            cuisine_names = [c.name for c in restaurant.cuisines.all()[:2]]
+            cuisine_text = ', '.join(cuisine_names) if cuisine_names else ''
+            
+            suggestions.append({
+                'type': 'restaurant',
+                'name': restaurant.name,
+                'id': restaurant.restaurant_id,
+                'cuisine': cuisine_text,
+                'rating': float(restaurant.overall_rating) if restaurant.overall_rating else None,
+                'menu_item': item.name,
+                'match_type': 'by_menu_item'
+            })
+        
+        # Limit results
+        suggestions = suggestions[:limit]
+        print(f"Total suggestions: {len(suggestions)}")
+        print(f"Returning: {suggestions}")
+        print("="*50)
+        
+        logger.info(f"Returning {len(suggestions)} restaurant suggestions")
+        
+        serializer = SearchSuggestionSerializer(suggestions, many=True)
+        return Response({'suggestions': serializer.data})
+
+class MenuItemSuggestionsView(APIView):
+    """
+    Search suggestions for menu items only
+    Used in the menu items explorer page
+    """
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        query = request.query_params.get('q', '').strip()
+        limit = int(request.query_params.get('limit', 8))
+        
+        logger.info(f"Menu item suggestions - Query: '{query}'")
+        
+        if not query or len(query) < 2:
+            return Response({'suggestions': []})
+        
+        suggestions = []
         
         # Menu item suggestions
         menu_item_matches = MenuItem.objects.filter(
             name__icontains=query,
             is_available=True,
             category__restaurant__status='active'
-        ).select_related('category__restaurant')[:5]
+        ).select_related('category__restaurant')[:limit]
         
         for item in menu_item_matches:
             suggestions.append({
                 'type': 'menu_item',
                 'name': item.name,
                 'id': item.item_id,
-                'restaurant_name': item.category.restaurant.name
+                'restaurant_name': item.category.restaurant.name,
+                'price': str(item.price) if item.price else None,
+                'description': item.description[:100] if item.description else None
             })
         
-        # Cuisine suggestions
+        logger.info(f"Returning {len(suggestions)} menu item suggestions")
+        
+        serializer = SearchSuggestionSerializer(suggestions, many=True)
+        return Response({'suggestions': serializer.data})
+
+class CombinedSuggestionsView(APIView):
+    """
+    Combined search suggestions for restaurants, menu items, and cuisines
+    Used in global search
+    """
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        query = request.query_params.get('q', '').strip()
+        limit = int(request.query_params.get('limit', 8))
+        
+        logger.info(f"Combined suggestions - Query: '{query}'")
+        
+        if not query or len(query) < 2:
+            return Response({'suggestions': []})
+        
+        suggestions = []
+        
+        # ========== RESTAURANT SUGGESTIONS ==========
+        restaurant_matches = Restaurant.objects.filter(
+            name__icontains=query,
+            status='active'
+        ).prefetch_related('cuisines')[:3]
+        
+        for restaurant in restaurant_matches:
+            cuisine_names = [c.name for c in restaurant.cuisines.all()[:2]]
+            cuisine_text = ', '.join(cuisine_names) if cuisine_names else 'Restaurant'
+            
+            suggestions.append({
+                'type': 'restaurant',
+                'name': restaurant.name,
+                'id': restaurant.restaurant_id,
+                'cuisine': cuisine_text,
+                'rating': float(restaurant.overall_rating) if restaurant.overall_rating else None,
+            })
+        
+        # ========== MENU ITEM SUGGESTIONS ==========
+        menu_item_matches = MenuItem.objects.filter(
+            name__icontains=query,
+            is_available=True,
+            category__restaurant__status='active'
+        ).select_related('category__restaurant')[:3]
+        
+        for item in menu_item_matches:
+            suggestions.append({
+                'type': 'menu_item',
+                'name': item.name,
+                'id': item.item_id,
+                'restaurant_name': item.category.restaurant.name,
+                'price': str(item.price) if item.price else None,
+            })
+        
+        # ========== CUISINE SUGGESTIONS ==========
         cuisine_matches = Cuisine.objects.filter(
             name__icontains=query,
             is_active=True
-        )[:3]
+        )[:2]
         
         for cuisine in cuisine_matches:
+            restaurant_count = Restaurant.objects.filter(
+                cuisines=cuisine,
+                status='active'
+            ).count()
+            
             suggestions.append({
                 'type': 'cuisine',
                 'name': cuisine.name,
-                'cuisine_name': cuisine.name
+                'id': cuisine.cuisine_id,
+                'restaurant_count': restaurant_count
             })
         
         # Limit results
         suggestions = suggestions[:limit]
         
+        logger.info(f"Returning {len(suggestions)} combined suggestions")
+        
         serializer = SearchSuggestionSerializer(suggestions, many=True)
         return Response({'suggestions': serializer.data})
-
+    
 class MenuItemSearchView(APIView):
     """
     Dedicated menu item search across all restaurants

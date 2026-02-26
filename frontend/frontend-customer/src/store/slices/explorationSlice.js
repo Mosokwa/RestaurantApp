@@ -14,13 +14,16 @@ export const searchRestaurants = createAsyncThunk(
   }
 );
 
-export const fetchSuggestions = createAsyncThunk(
-  'exploration/fetchSuggestions',
+export const fetchRestaurantSuggestions = createAsyncThunk(
+  'exploration/fetchRestaurantSuggestions',
   async (query, { rejectWithValue }) => {
     try {
-      const suggestions = await explorationService.getSuggestions(query);
+      console.log('Fetching restaurant suggestions for:', query);
+      const suggestions = await explorationService.getRestaurantSuggestions(query);
+      console.log('Suggestions received:', suggestions);
       return suggestions;
     } catch (error) {
+      console.error('Error in fetchRestaurantSuggestions:', error);
       return rejectWithValue(error.response?.data || error.message);
     }
   }
@@ -206,6 +209,12 @@ const explorationSlice = createSlice({
       state.results.currentPage = 1;
       state.results.hasMore = false;
     },
+
+    clearSuggestions: (state) => {
+      state.suggestions.items = [];
+      state.suggestions.showDropdown = false;
+      state.suggestions.loading = false;
+    },
     
     setUserLocation: (state, action) => {
       state.userLocation = { ...state.userLocation, ...action.payload };
@@ -251,18 +260,20 @@ const explorationSlice = createSlice({
         state.results.error = action.payload;
       })
       
-      // Fetch Suggestions
-      .addCase(fetchSuggestions.pending, (state) => {
+      // Fetch Restaurant Suggestions
+      .addCase(fetchRestaurantSuggestions.pending, (state) => {
         state.suggestions.loading = true;
       })
-      .addCase(fetchSuggestions.fulfilled, (state, action) => {
+      .addCase(fetchRestaurantSuggestions.fulfilled, (state, action) => {
         state.suggestions.loading = false;
-        state.suggestions.items = action.payload;
+        state.suggestions.items = action.payload || [];
         state.suggestions.showDropdown = true;
+        console.log('Suggestions stored in state:', state.suggestions.items);
       })
-      .addCase(fetchSuggestions.rejected, (state) => {
+      .addCase(fetchRestaurantSuggestions.rejected, (state, action) => {
         state.suggestions.loading = false;
         state.suggestions.items = [];
+        state.suggestions.error = action.payload;
       })
       
       // Fetch Location

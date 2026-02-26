@@ -83,13 +83,23 @@ class MenuItemSearchSerializer(serializers.ModelSerializer):
         ]
 
 class SearchSuggestionSerializer(serializers.Serializer):
-    """Serializer for search suggestions"""
-    type = serializers.CharField()  # 'restaurant', 'menu_item', 'cuisine'
+    type = serializers.CharField()
     name = serializers.CharField()
-    id = serializers.IntegerField(required=False)
-    restaurant_name = serializers.CharField(required=False)
-    cuisine_name = serializers.CharField(required=False)
-
+    id = serializers.IntegerField(required=False, allow_null=True)
+    restaurant_name = serializers.CharField(required=False, allow_null=True)
+    cuisine = serializers.CharField(required=False, allow_null=True)
+    cuisine_name = serializers.CharField(required=False, allow_null=True)
+    rating = serializers.FloatField(required=False, allow_null=True)
+    restaurant_count = serializers.IntegerField(required=False, allow_null=True)
+    menu_item = serializers.CharField(required=False, allow_null=True)
+    match_type = serializers.CharField(required=False, allow_null=True)
+    price = serializers.CharField(required=False, allow_null=True)
+    
+    def to_representation(self, instance):
+        if isinstance(instance, dict):
+            return instance
+        return super().to_representation(instance)
+    
 class SearchFilterSerializer(serializers.Serializer):
     """Serializer for search filters"""
     query = serializers.CharField(required=False)

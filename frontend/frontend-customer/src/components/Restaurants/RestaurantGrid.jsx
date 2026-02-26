@@ -5,8 +5,15 @@ import './RestaurantGrid.css';
 const RestaurantGrid = forwardRef(({ 
   restaurants = [], 
   onRestaurantClick,
-  userLocation 
+  userLocation, 
+  searchQuery 
 }, ref) => {
+
+  // Log what we're receiving
+  console.log('RestaurantGrid received:', restaurants);
+  console.log('Is array?', Array.isArray(restaurants));
+  console.log('Length:', restaurants?.length);
+  
   // Ensure restaurants is an array
   const restaurantList = React.useMemo(() => {
     // Handle different possible data structures
@@ -37,13 +44,11 @@ const RestaurantGrid = forwardRef(({
       <div className="no-results glass-card">
         <span className="no-results-icon">🔍</span>
         <h3>No restaurants found</h3>
+        {searchQuery && <p>No results matching "{searchQuery}"</p>}
         <p>Try adjusting your filters or search criteria</p>
         <div className="no-results-suggestions">
           <button className="suggestion-chip" onClick={() => window.location.reload()}>
             Clear Filters
-          </button>
-          <button className="suggestion-chip" onClick={() => window.location.href = '/restaurants'}>
-            Browse All
           </button>
         </div>
       </div>

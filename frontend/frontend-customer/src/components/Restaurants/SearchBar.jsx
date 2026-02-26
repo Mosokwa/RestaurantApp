@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useDispatch } from 'react-redux';
-import { fetchSuggestions, clearSuggestions, setSearchQuery } from '../../store/slices/explorationSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchRestaurantSuggestions, clearSuggestions } from '../../store/slices/explorationSlice';
 import './SearchBar.css';
 
 const SearchBar = ({
   value = '',
   onChange,
   onSearch,
-  suggestions = [],
   onSelectSuggestion,
-  loading = false,
   onClear
 }) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -21,11 +19,21 @@ const SearchBar = ({
   const recognitionRef = useRef(null);
   const dispatch = useDispatch();
 
+  // Get suggestions from Redux state
+  const { items: suggestions = [], loading } = useSelector(
+    (state) => state.exploration?.suggestions || { items: [], loading: false }
+  );
+
+  // Debug: Log suggestions when they change
+  useEffect(() => {
+    console.log('SearchBar - suggestions from Redux:', suggestions);
+    console.log('Loading state:', loading);
+  }, [suggestions, loading]);
+
   // Check if browser supports speech recognition
   useEffect(() => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       setVoiceSupported(false);
-      console.warn('Speech recognition not supported in this browser');
     }
   }, []);
 
@@ -43,15 +51,13 @@ const SearchBar = ({
         if (onChange) {
           onChange({ target: { value: transcript } });
         }
-        // Automatically search after voice input
         setTimeout(() => {
           if (onSearch) onSearch(transcript);
         }, 100);
         setIsListening(false);
       };
 
-      recognitionRef.current.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
+      recognitionRef.current.onerror = () => {
         setIsListening(false);
       };
 
@@ -71,7 +77,8 @@ const SearchBar = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       if (value && value.length >= 2) {
-        dispatch(fetchSuggestions(value));
+        console.log('Dispatching fetchRestaurantSuggestions for:', value);
+        dispatch(fetchRestaurantSuggestions(value));
       } else {
         dispatch(clearSuggestions());
       }
@@ -93,10 +100,9 @@ const SearchBar = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dispatch]);
 
-  // Handle voice search
   const handleVoiceSearch = () => {
     if (!voiceSupported) {
-      alert('Voice search is not supported in your browser. Please use Chrome, Edge, or Safari.');
+      alert('Voice search is not supported in your browser.');
       return;
     }
 
@@ -107,13 +113,11 @@ const SearchBar = ({
         recognitionRef.current?.start();
         setIsListening(true);
       } catch (error) {
-        console.error('Failed to start voice recognition:', error);
         setIsListening(false);
       }
     }
   };
 
-  // Keyboard navigation
   const handleKeyDown = (e) => {
     if (!suggestions || suggestions.length === 0) {
       if (e.key === 'Enter') {
@@ -153,7 +157,6 @@ const SearchBar = ({
     }
   };
 
-  // Handle search submit
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (value && value.trim()) {
@@ -185,7 +188,7 @@ const SearchBar = ({
             ref={inputRef}
             type="text"
             className="search-input"
-            placeholder="Search for restaurants, cuisines, or dishes..."
+            placeholder="Search for restaurants by name, cuisine, or dish..."
             value={value}
             onChange={onChange}
             onFocus={() => setIsFocused(true)}
@@ -217,7 +220,6 @@ const SearchBar = ({
               className={`voice-btn ${isListening ? 'listening' : ''}`} 
               onClick={handleVoiceSearch}
               aria-label={isListening ? 'Stop voice search' : 'Start voice search'}
-              title={isListening ? 'Listening...' : 'Voice search'}
             >
               🎤
             </button>
@@ -230,7 +232,7 @@ const SearchBar = ({
         <div className="suggestions-dropdown glass-card">
           {suggestions.map((suggestion, index) => (
             <div
-              key={`${suggestion.type}-${suggestion.id || suggestion.name || index}`}
+              key={suggestion.id || index}
               className={`suggestion-item ${index === selectedIndex ? 'selected' : ''}`}
               onClick={() => {
                 onSelectSuggestion(suggestion);
@@ -247,28 +249,19 @@ const SearchBar = ({
                 
                 {suggestion.type === 'restaurant' && (
                   <span className="suggestion-meta">
-                    {suggestion.cuisine || 'Restaurant'} • ★ {suggestion.rating || 'N/A'}
-                  </span>
-                )}
-                
-                {suggestion.type === 'menu_item' && (
-                  <span className="suggestion-meta">
-                    at {suggestion.restaurant_name || 'Restaurant'}
-                  </span>
-                )}
-                
-                {suggestion.type === 'cuisine' && (
-                  <span className="suggestion-meta">
-                    Cuisine
+                    {suggestion.cuisine || 'Restaurant'} 
+                    {suggestion.rating && ` • ⭐ ${suggestion.rating}`}
+                    {suggestion.match_type === 'by_menu_item' && suggestion.menu_item && 
+                      ` • Serves "${suggestion.menu_item}"`}
                   </span>
                 )}
               </div>
               
-              {suggestion.type === 'restaurant' && (
-                <span className="suggestion-badge">
-                  Restaurant
-                </span>
-              )}
+              <span className="suggestion-badge">
+                {suggestion.match_type === 'direct' ? 'Restaurant' : 
+                 suggestion.match_type === 'by_cuisine' ? 'By Cuisine' : 
+                 suggestion.match_type === 'by_menu_item' ? 'Has Dish' : 'Restaurant'}
+              </span>
             </div>
           ))}
         </div>

@@ -1,19 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './RestaurantCard.css';
-
-// Default fallback images
-const DEFAULT_RESTAURANT_IMAGE = '/banner.jpg';
-const DEFAULT_FOOD_IMAGE = '/food.png';
 
 const RestaurantCard = ({ restaurant, onClick, userLocation }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [imgSrc, setImgSrc] = useState('');
 
   const {
-    restaurant_id,
     name = 'Restaurant Name',
     banner_image,
-    logo,
     overall_rating = 0,
     total_reviews = 0,
     cuisines = [],
@@ -25,148 +20,146 @@ const RestaurantCard = ({ restaurant, onClick, userLocation }) => {
     price_level = '$$'
   } = restaurant || {};
 
-  // Get primary branch info
+  // Determine the image source on component mount and when banner_image changes
+  useEffect(() => {
+    
+    // Determine the correct image path
+    let imagePath = '';
+    
+    if (banner_image) {
+      // If banner_image is a full URL, use it as is
+      if (banner_image.startsWith('http')) {
+        imagePath = banner_image;
+      } 
+      // If it starts with /, it's already a root-relative path
+      else if (banner_image.startsWith('/')) {
+        imagePath = banner_image;
+      }
+      // Otherwise, assume it's in the media folder
+      else {
+        // Try different possible paths
+        imagePath = `/media/${banner_image}`;
+      }
+    } else {
+      // No banner image, use default
+      imagePath = '/banner.jpg';
+    }
+    
+    setImgSrc(imagePath);
+    setImageLoaded(false);
+    setImageError(false);
+  }, [banner_image, name]);
+
+  const handleImageError = () => {
+    console.log('Image failed to load:', imgSrc);
+    setImageError(true);
+    
+    // Try the default banner as last resort
+    if (imgSrc !== '/images/banner.jpg') {
+      setImgSrc('/images/banner.jpg');
+    }
+  };
+
+  const handleImageLoad = () => {
+    console.log('Image loaded successfully:', imgSrc);
+    setImageLoaded(true);
+    setImageError(false);
+  };
+
   const primaryBranch = branches[0] || {};
   const isOpenNow = primaryBranch?.is_open_now || false;
   const city = primaryBranch?.address?.city || '';
 
-  // Format rating
   const rating = parseFloat(overall_rating || 0).toFixed(1);
   const reviewCount = total_reviews || 0;
 
-  // Get cuisine names
   const cuisineNames = Array.isArray(cuisines) 
     ? cuisines.slice(0, 2).map(c => c?.name || '').filter(Boolean).join(' • ')
     : '';
   const remainingCuisines = Array.isArray(cuisines) ? Math.max(0, cuisines.length - 2) : 0;
 
-  // Handle image with fallbacks - try banner first, then logo, then default
-  const getImageSource = () => {
-    if (imageError) return DEFAULT_RESTAURANT_IMAGE;
-    
-    // Try banner image first
-    if (banner_image) {
-      // Handle both full URLs and relative paths
-      if (banner_image.startsWith('http')) {
-        return banner_image;
-      }
-      // If it's a relative path, ensure it's properly formatted
-      return banner_image.startsWith('/') ? banner_image : `/${banner_image}`;
-    }
-    
-    // Try logo as fallback
-    if (logo) {
-      return logo.startsWith('/') ? logo : `/${logo}`;
-    }
-    
-    // Default fallback
-    return DEFAULT_RESTAURANT_IMAGE;
-  };
-
-  const imageUrl = getImageSource();
-
   return (
-    <div className="restaurant-card glass-card" onClick={() => onClick(restaurant)}>
-      {/* Card Badges */}
-      <div className="card-badges">
-        {is_featured && (
-          <span className="badge featured">⭐ Featured</span>
-        )}
-        {is_verified && (
-          <span className="badge verified">✓ Verified</span>
-        )}
-        {!isOpenNow && (
-          <span className="badge closed">🔒 Closed</span>
-        )}
+    <div className="rex-card" onClick={() => onClick(restaurant)}>
+      <div className="rex-card-badges">
+        {is_featured && <span className="rex-badge featured">⭐ Featured</span>}
+        {is_verified && <span className="rex-badge verified">✓ Verified</span>}
+        {!isOpenNow && <span className="rex-badge closed">🔒 Closed</span>}
         {distance_km && distance_km < 1 && (
-          <span className="badge near">📍 Very Near</span>
+          <span className="rex-badge near">📍 Very Near</span>
         )}
       </div>
 
-      {/* Image Container */}
-      <div className="card-image-container">
+      <div className="rex-card-image-container">
         {!imageLoaded && !imageError && (
-          <div className="image-skeleton" />
+          <div className="rex-image-skeleton">
+            <span>Loading...</span>
+          </div>
         )}
-        <img
-          src={imageUrl}
-          alt={name}
-          className={`card-image ${imageLoaded ? 'loaded' : ''}`}
-          onLoad={() => setImageLoaded(true)}
-          onError={() => {
-            console.warn(`Failed to load image for ${name}:`, imageUrl);
-            setImageError(true);
-          }}
-          loading="lazy"
-        />
-        
-        {/* Offer Overlay - Example if you have offers */}
-        {restaurant?.has_offer && (
-          <div className="offer-badge">
-            <span className="offer-text">🔥 Special Offer</span>
+        {imgSrc && (
+          <img
+            src={imgSrc}
+            alt={name}
+            className={`rex-card-image ${imageLoaded ? 'loaded' : ''}`}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+            loading="lazy"
+          />
+        )}
+        {imageError && (
+          <div className="rex-image-error">
+            <span>📸</span>
+            <span>Image not available</span>
           </div>
         )}
       </div>
 
-      {/* Card Content */}
-      <div className="card-content">
-        <div className="card-header">
-          <h3 className="restaurant-name">{name}</h3>
-          <div className="rating-container">
-            <span className="rating-star">★</span>
-            <span className="rating-value">{rating}</span>
-            <span className="rating-count">({reviewCount})</span>
+      <div className="rex-card-content">
+        <div className="rex-card-header">
+          <h3 className="rex-restaurant-name" title={name}>{name}</h3>
+          <div className="rex-rating-container">
+            <span className="rex-rating-star">★</span>
+            <span className="rex-rating-value">{rating}</span>
+            <span className="rex-rating-count">({reviewCount})</span>
           </div>
         </div>
 
-        {/* Cuisine & Location */}
-        <div className="restaurant-meta">
-          <div className="cuisine-info">
-            <span className="meta-icon">🍽️</span>
-            <span className="cuisine-text">
+        <div className="rex-restaurant-meta">
+          <div className="rex-cuisine-info">
+            <span className="rex-meta-icon">🍽️</span>
+            <span className="rex-cuisine-text" title={cuisineNames}>
               {cuisineNames || 'Various Cuisines'}
               {remainingCuisines > 0 && ` +${remainingCuisines}`}
             </span>
           </div>
           
-          <div className="location-info">
-            <span className="meta-icon">📍</span>
-            <span className="distance-text">
+          <div className="rex-location-info">
+            <span className="rex-meta-icon">📍</span>
+            <span className="rex-distance-text">
               {distance_km ? `${distance_km.toFixed(1)} km` : city || 'Location available'}
             </span>
-            {isOpenNow && (
-              <span className="open-badge">Open</span>
-            )}
+            {isOpenNow && <span className="rex-open-badge">Open</span>}
           </div>
         </div>
 
-        {/* Price & Delivery */}
-        <div className="restaurant-footer">
-          <div className="price-info">
-            <span className="price-level">{price_level}</span>
-            {restaurant?.min_order_amount && (
-              <span className="min-order">Min ${restaurant.min_order_amount}</span>
-            )}
+        <div className="rex-restaurant-footer">
+          <div className="rex-price-info">
+            <span className="rex-price-level">{price_level}</span>
           </div>
-          
-          <div className="delivery-info">
+          <div className="rex-delivery-info">
             {restaurant?.delivery_fee !== undefined && (
-              <span className="delivery-fee">
-                🚲 ${Number(restaurant.delivery_fee).toFixed(2)}
-              </span>
+              <span className="rex-delivery-fee">🚲 ${Number(restaurant.delivery_fee).toFixed(2)}</span>
             )}
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="card-actions">
+        <div className="rex-card-actions">
           {reservation_enabled && (
-            <button className="action-btn reserve-btn" onClick={(e) => e.stopPropagation()}>
+            <button className="rex-action-btn rex-reserve-btn" onClick={(e) => e.stopPropagation()}>
               📅 Reserve
             </button>
           )}
-          <button className="action-btn order-btn" onClick={(e) => e.stopPropagation()}>
-            🍽️ Order
+          <button className="rex-action-btn rex-view-btn" onClick={(e) => e.stopPropagation()}>
+            👁️ View
           </button>
         </div>
       </div>

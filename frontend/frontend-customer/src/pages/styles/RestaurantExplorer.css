@@ -316,6 +316,46 @@ body:has(.side-bar) .restaurant-explorer,
   color: white;
 }
 
+/* Mobile Filter Button */
+.mobile-filter-btn {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  background: rgba(230, 57, 70, 0.1);
+  border: 1px solid rgba(230, 57, 70, 0.3);
+  border-radius: 30px;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.mobile-filter-btn:hover {
+  background: rgba(230, 57, 70, 0.2);
+}
+
+.filter-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #e63946;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: bold;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #1a1a1a;
+}
+
+
 /* ==========================================================================
    LOAD MORE
    ========================================================================== */
@@ -426,6 +466,29 @@ body:has(.side-bar) .restaurant-explorer,
     flex: 1;
     max-width: 80px;
   }
+
+  .mobile-filter-btn {
+    display: flex;
+  }
+  
+  .view-toggle {
+    display: none !important;
+  }
+  
+  .results-controls {
+    width: 100%;
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .sort-select {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .mobile-filter-btn {
+    flex-shrink: 0;
+  }
 }
 
 @media (max-width: 480px) {
@@ -449,5 +512,17 @@ body:has(.side-bar) .restaurant-explorer,
   .sort-select {
     min-width: 140px;
     font-size: 0.85rem;
+  }
+
+  .mobile-filter-btn span:last-child {
+    display: none; /* Hide text on very small screens, show only icon */
+  }
+  
+  .mobile-filter-btn {
+    padding: 0.6rem;
+  }
+  
+  .mobile-filter-btn .filter-icon {
+    margin: 0;
   }
 }

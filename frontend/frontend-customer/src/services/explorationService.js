@@ -5,26 +5,25 @@ export const explorationService = {
   searchRestaurants: async (filters, page = 1) => {
     try {
       const params = {
-        ...buildPaginationParams(page, 20),
-        ...filters.location,
-        q: filters.searchQuery,  // This must match what backend expects
-        cuisine: filters.cuisines?.length ? filters.cuisines.join(',') : undefined,
-        min_rating: filters.minRating > 0 ? filters.minRating : undefined,
-        price_range: filters.priceRanges?.length ? filters.priceRanges.join(',') : undefined,
-        dietary: filters.dietary?.length ? filters.dietary.join(',') : undefined,
+        page: page,
+        page_size: 20,
+        q: filters.searchQuery,
+        lat: filters.location?.lat,
+        lng: filters.location?.lng,
+        radius: filters.location?.radius || 10,
+        min_rating: filters.minRating || undefined,
         sort_by: filters.sortBy !== 'relevance' ? filters.sortBy : undefined,
         is_open_now: filters.hours?.isOpenNow || undefined,
       };
 
-      // Remove undefined and empty values
+      // Remove undefined values
       Object.keys(params).forEach(key => {
-        if (params[key] === undefined || params[key] === '' || 
-            (Array.isArray(params[key]) && params[key].length === 0)) {
+        if (params[key] === undefined || params[key] === null || params[key] === '') {
           delete params[key];
         }
       });
 
-      console.log('Search params:', params); // Debug log
+      console.log('Search params:', params);
 
       const response = await api.get('/search/comprehensive/', { params });
       return parsePaginatedResponse(response);
@@ -35,12 +34,54 @@ export const explorationService = {
   },
 
   // Get search suggestions for autocomplete
-  getSuggestions: async (query) => {
+  getRestaurantSuggestions: async (query) => {
     if (!query || query.length < 2) return [];
-    const response = await api.get('/search/suggestions/', { 
-      params: { q: query, limit: 8 } 
-    });
-    return response.data.suggestions || [];
+    try {
+      console.log('Calling restaurant suggestions API for:', query);
+      const params = new URLSearchParams();
+      params.append('q', query);
+      params.append('limit', '8');
+      
+      const response = await api.get('/search/suggestions/restaurants/', { params });
+      console.log('Restaurant suggestions response:', response.data);
+      return response.data.suggestions || [];
+    } catch (error) {
+      console.error('Error fetching restaurant suggestions:', error);
+      return [];
+    }
+  },
+
+
+  // Get menu item suggestions (for menu explorer)
+  getMenuItemSuggestions: async (query) => {
+    if (!query || query.length < 2) return [];
+    try {
+      const params = new URLSearchParams();
+      params.append('q', query);
+      params.append('limit', '8');
+      
+      const response = await api.get('/search/suggestions/menu-items/', { params });
+      return response.data.suggestions || [];
+    } catch (error) {
+      console.error('Error fetching menu item suggestions:', error);
+      return [];
+    }
+  },
+
+  // Get combined suggestions (for global search)
+  getCombinedSuggestions: async (query) => {
+    if (!query || query.length < 2) return [];
+    try {
+      const params = new URLSearchParams();
+      params.append('q', query);
+      params.append('limit', '8');
+      
+      const response = await api.get('/search/suggestions/combined/', { params });
+      return response.data.suggestions || [];
+    } catch (error) {
+      console.error('Error fetching combined suggestions:', error);
+      return [];
+    }
   },
 
   // Get nearby restaurants based on user location

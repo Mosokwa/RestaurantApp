@@ -3,10 +3,10 @@ import './FilterPanelInline.css';
 
 const FilterPanelInline = ({ filters, onFilterChange, onReset, onClose }) => {
   const [expandedSections, setExpandedSections] = useState({
-    cuisine: true,
+    quick: true,
+    cuisine: false,
     price: false,
     rating: false,
-    dietary: false,
     features: false
   });
 
@@ -17,7 +17,7 @@ const FilterPanelInline = ({ filters, onFilterChange, onReset, onClose }) => {
     }));
   };
 
-  // Cuisine options (would come from API in real implementation)
+  // Cuisine options (would come from API)
   const cuisineOptions = [
     { id: 1, name: 'Italian', count: 24 },
     { id: 2, name: 'Japanese', count: 18 },
@@ -30,24 +30,76 @@ const FilterPanelInline = ({ filters, onFilterChange, onReset, onClose }) => {
   ];
 
   return (
-    <div className="filter-panel-inline glass-card">
-      <div className="filter-panel-header">
-        <h3>Filter Restaurants</h3>
-        <button className="close-filter-btn" onClick={onClose}>✕</button>
+    <div className="fp-container glass-card">
+      <div className="fp-header">
+        <h3 className="fp-title">
+          <span className="fp-icon">⚙️</span>
+          Filter Restaurants
+        </h3>
+        <button className="fp-close-btn" onClick={onClose} aria-label="Close filters">
+          ✕
+        </button>
       </div>
 
-      <div className="filter-panel-content">
+      <div className="fp-content">
+        {/* Quick Filters Section */}
+        <div className="fp-section">
+          <div className="fp-section-header" onClick={() => toggleSection('quick')}>
+            <div className="fp-section-title">
+              <span className="fp-section-icon">⚡</span>
+              <span>Quick Filters</span>
+            </div>
+            <span className="fp-section-arrow">{expandedSections.quick ? '−' : '+'}</span>
+          </div>
+          
+          {expandedSections.quick && (
+            <div className="fp-quick-grid">
+              <button 
+                className={`fp-quick-chip ${filters.nearMeActive ? 'active' : ''}`}
+                onClick={() => onFilterChange('nearMeActive', !filters.nearMeActive)}
+              >
+                <span className="fp-chip-icon">📍</span>
+                <span>Near Me</span>
+              </button>
+              <button 
+                className={`fp-quick-chip ${filters.hours?.isOpenNow ? 'active' : ''}`}
+                onClick={() => onFilterChange('hours.isOpenNow', !filters.hours?.isOpenNow, true)}
+              >
+                <span className="fp-chip-icon">🕒</span>
+                <span>Open Now</span>
+              </button>
+              <button 
+                className={`fp-quick-chip ${filters.popular ? 'active' : ''}`}
+                onClick={() => onFilterChange('popular', !filters.popular)}
+              >
+                <span className="fp-chip-icon">🔥</span>
+                <span>Popular</span>
+              </button>
+              <button 
+                className={`fp-quick-chip ${filters.features?.fastDelivery ? 'active' : ''}`}
+                onClick={() => onFilterChange('features.fastDelivery', !filters.features?.fastDelivery, true)}
+              >
+                <span className="fp-chip-icon">🚀</span>
+                <span>Fast Delivery</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Cuisine Section */}
-        <div className="filter-section">
-          <div className="filter-section-header" onClick={() => toggleSection('cuisine')}>
-            <span>🍽️ Cuisine</span>
-            <span className="section-arrow">{expandedSections.cuisine ? '−' : '+'}</span>
+        <div className="fp-section">
+          <div className="fp-section-header" onClick={() => toggleSection('cuisine')}>
+            <div className="fp-section-title">
+              <span className="fp-section-icon">🍽️</span>
+              <span>Cuisine</span>
+            </div>
+            <span className="fp-section-arrow">{expandedSections.cuisine ? '−' : '+'}</span>
           </div>
           
           {expandedSections.cuisine && (
-            <div className="filter-options">
+            <div className="fp-checkbox-grid">
               {cuisineOptions.map(cuisine => (
-                <label key={cuisine.id} className="filter-checkbox">
+                <label key={cuisine.id} className="fp-checkbox">
                   <input 
                     type="checkbox"
                     checked={filters.cuisines?.includes(cuisine.id)}
@@ -58,8 +110,8 @@ const FilterPanelInline = ({ filters, onFilterChange, onReset, onClose }) => {
                       onFilterChange('cuisines', newCuisines);
                     }}
                   />
-                  <span className="checkbox-label">{cuisine.name}</span>
-                  <span className="filter-count">{cuisine.count}</span>
+                  <span className="fp-checkbox-label">{cuisine.name}</span>
+                  <span className="fp-checkbox-count">{cuisine.count}</span>
                 </label>
               ))}
             </div>
@@ -67,23 +119,26 @@ const FilterPanelInline = ({ filters, onFilterChange, onReset, onClose }) => {
         </div>
 
         {/* Price Range Section */}
-        <div className="filter-section">
-          <div className="filter-section-header" onClick={() => toggleSection('price')}>
-            <span>💰 Price Range</span>
-            <span className="section-arrow">{expandedSections.price ? '−' : '+'}</span>
+        <div className="fp-section">
+          <div className="fp-section-header" onClick={() => toggleSection('price')}>
+            <div className="fp-section-title">
+              <span className="fp-section-icon">💰</span>
+              <span>Price Range</span>
+            </div>
+            <span className="fp-section-arrow">{expandedSections.price ? '−' : '+'}</span>
           </div>
           
           {expandedSections.price && (
-            <div className="filter-options price-options">
+            <div className="fp-price-grid">
               {['$', '$$', '$$$', '$$$$'].map(price => (
                 <button
                   key={price}
-                  className={`price-chip ${filters.priceRanges?.includes(price) ? 'active' : ''}`}
+                  className={`fp-price-chip ${filters.priceRanges?.includes(price) ? 'active' : ''}`}
                   onClick={() => {
-                    const newPrices = filters.priceRanges?.includes(price)
+                    const newRanges = filters.priceRanges?.includes(price)
                       ? filters.priceRanges.filter(p => p !== price)
                       : [...(filters.priceRanges || []), price];
-                    onFilterChange('priceRanges', newPrices);
+                    onFilterChange('priceRanges', newRanges);
                   }}
                 >
                   {price}
@@ -94,18 +149,21 @@ const FilterPanelInline = ({ filters, onFilterChange, onReset, onClose }) => {
         </div>
 
         {/* Rating Section */}
-        <div className="filter-section">
-          <div className="filter-section-header" onClick={() => toggleSection('rating')}>
-            <span>⭐ Minimum Rating</span>
-            <span className="section-arrow">{expandedSections.rating ? '−' : '+'}</span>
+        <div className="fp-section">
+          <div className="fp-section-header" onClick={() => toggleSection('rating')}>
+            <div className="fp-section-title">
+              <span className="fp-section-icon">⭐</span>
+              <span>Minimum Rating</span>
+            </div>
+            <span className="fp-section-arrow">{expandedSections.rating ? '−' : '+'}</span>
           </div>
           
           {expandedSections.rating && (
-            <div className="filter-options rating-options">
+            <div className="fp-rating-grid">
               {[4.5, 4.0, 3.5, 3.0].map(rating => (
                 <button
                   key={rating}
-                  className={`rating-chip ${filters.minRating === rating ? 'active' : ''}`}
+                  className={`fp-rating-chip ${filters.minRating === rating ? 'active' : ''}`}
                   onClick={() => onFilterChange('minRating', rating)}
                 >
                   {rating}+ ★
@@ -115,93 +173,60 @@ const FilterPanelInline = ({ filters, onFilterChange, onReset, onClose }) => {
           )}
         </div>
 
-        {/* Dietary Section */}
-        <div className="filter-section">
-          <div className="filter-section-header" onClick={() => toggleSection('dietary')}>
-            <span>🌱 Dietary</span>
-            <span className="section-arrow">{expandedSections.dietary ? '−' : '+'}</span>
-          </div>
-          
-          {expandedSections.dietary && (
-            <div className="filter-options">
-              {['vegetarian', 'vegan', 'gluten-free', 'halal'].map(diet => (
-                <label key={diet} className="filter-checkbox">
-                  <input 
-                    type="checkbox"
-                    checked={filters.dietary?.includes(diet)}
-                    onChange={(e) => {
-                      const newDietary = e.target.checked
-                        ? [...(filters.dietary || []), diet]
-                        : (filters.dietary || []).filter(d => d !== diet);
-                      onFilterChange('dietary', newDietary);
-                    }}
-                  />
-                  <span className="checkbox-label capitalize">{diet}</span>
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Features Section */}
-        <div className="filter-section">
-          <div className="filter-section-header" onClick={() => toggleSection('features')}>
-            <span>✨ Features</span>
-            <span className="section-arrow">{expandedSections.features ? '−' : '+'}</span>
+        <div className="fp-section">
+          <div className="fp-section-header" onClick={() => toggleSection('features')}>
+            <div className="fp-section-title">
+              <span className="fp-section-icon">✨</span>
+              <span>Features</span>
+            </div>
+            <span className="fp-section-arrow">{expandedSections.features ? '−' : '+'}</span>
           </div>
           
           {expandedSections.features && (
-            <div className="filter-options">
-              <label className="filter-checkbox">
-                <input 
-                  type="checkbox"
-                  checked={filters.hours?.isOpenNow}
-                  onChange={(e) => onFilterChange('hours.isOpenNow', e.target.checked, true)}
-                />
-                <span className="checkbox-label">Open Now</span>
-              </label>
-              <label className="filter-checkbox">
+            <div className="fp-checkbox-grid">
+              <label className="fp-checkbox">
                 <input 
                   type="checkbox"
                   checked={filters.features?.reservationEnabled}
                   onChange={(e) => onFilterChange('features.reservationEnabled', e.target.checked, true)}
                 />
-                <span className="checkbox-label">Reservations Available</span>
+                <span className="fp-checkbox-label">Reservations</span>
               </label>
-              <label className="filter-checkbox">
+              <label className="fp-checkbox">
                 <input 
                   type="checkbox"
                   checked={filters.features?.deliveryAvailable}
                   onChange={(e) => onFilterChange('features.deliveryAvailable', e.target.checked, true)}
                 />
-                <span className="checkbox-label">Delivery Available</span>
+                <span className="fp-checkbox-label">Delivery</span>
               </label>
-              <label className="filter-checkbox">
+              <label className="fp-checkbox">
                 <input 
                   type="checkbox"
                   checked={filters.features?.isVerified}
                   onChange={(e) => onFilterChange('features.isVerified', e.target.checked, true)}
                 />
-                <span className="checkbox-label">Verified</span>
+                <span className="fp-checkbox-label">Verified</span>
               </label>
-              <label className="filter-checkbox">
+              <label className="fp-checkbox">
                 <input 
                   type="checkbox"
                   checked={filters.features?.hasOffers}
                   onChange={(e) => onFilterChange('features.hasOffers', e.target.checked, true)}
                 />
-                <span className="checkbox-label">Special Offers</span>
+                <span className="fp-checkbox-label">Special Offers</span>
               </label>
             </div>
           )}
         </div>
       </div>
 
-      <div className="filter-panel-footer">
-        <button className="reset-filters-btn" onClick={onReset}>
+      <div className="fp-footer">
+        <button className="fp-reset-btn" onClick={onReset}>
           Reset All
         </button>
-        <button className="apply-filters-btn" onClick={onClose}>
+        <button className="fp-apply-btn" onClick={onClose}>
           Apply Filters
         </button>
       </div>

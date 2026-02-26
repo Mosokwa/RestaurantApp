@@ -234,6 +234,39 @@ class RestaurantSearchEngine:
         queryset = Restaurant.objects.filter(status='active').prefetch_related(
             'cuisines', 'branches', 'branches__address'
         )
+
+        # Enhanced search by name, cuisine, and menu items
+        if self.query:
+            from django.db.models import Q
+            from .models import Cuisine, MenuItem
+            
+            search_terms = self.query.split()
+            restaurant_q = Q()
+            
+            for term in search_terms:
+                if len(term) < 2:
+                    continue
+                restaurant_q |= Q(name__icontains=term)
+            
+            # Find by cuisine
+            cuisine_ids = Cuisine.objects.filter(
+                name__icontains=self.query
+            ).values_list('cuisine_id', flat=True)
+            
+            # Find by menu item
+            restaurant_ids_by_menu = MenuItem.objects.filter(
+                name__icontains=self.query,
+                is_available=True
+            ).values_list('category__restaurant_id', flat=True).distinct()
+            
+            # Combine all conditions
+            final_q = restaurant_q
+            if cuisine_ids:
+                final_q |= Q(cuisines__cuisine_id__in=cuisine_ids)
+            if restaurant_ids_by_menu:
+                final_q |= Q(restaurant_id__in=restaurant_ids_by_menu)
+            
+            queryset = queryset.filter(final_q).distinct()
         
         # Apply city filter if no coordinates but city provided
         if not self.filters.get('latitude') and self.filters.get('city'):
