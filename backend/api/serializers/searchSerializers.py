@@ -2,7 +2,7 @@ from rest_framework import serializers
 from ..models import Restaurant, MenuItem
 
 class RestaurantSearchSerializer(serializers.ModelSerializer):
-    """Enhanced serializer with new location features"""
+    """Enhanced serializer with location features and match indicators"""
     distance_km = serializers.FloatField(read_only=True)
     cuisine_names = serializers.SerializerMethodField()
     branch_count = serializers.SerializerMethodField()
@@ -12,6 +12,12 @@ class RestaurantSearchSerializer(serializers.ModelSerializer):
     open_branches_count = serializers.IntegerField(read_only=True)
     location_priority = serializers.SerializerMethodField()
     
+    # Match indicators
+    direct_match = serializers.BooleanField(read_only=True, default=False)
+    has_cuisine = serializers.BooleanField(read_only=True, default=False)
+    has_category = serializers.BooleanField(read_only=True, default=False)
+    has_dish = serializers.BooleanField(read_only=True, default=False)
+    
     class Meta:
         model = Restaurant
         fields = [
@@ -19,7 +25,8 @@ class RestaurantSearchSerializer(serializers.ModelSerializer):
             'phone_number', 'email', 'overall_rating', 'total_reviews',
             'distance_km', 'branch_count', 'estimated_delivery_time',
             'is_open', 'has_open_branch', 'open_branches_count', 
-            'location_priority', 'is_featured', 'is_verified', 'created_at'
+            'location_priority', 'is_featured', 'is_verified', 'created_at',
+            'direct_match', 'has_cuisine', 'has_category', 'has_dish'
         ]
     
     def get_cuisine_names(self, obj):
@@ -29,14 +36,12 @@ class RestaurantSearchSerializer(serializers.ModelSerializer):
         return obj.branches.count()
     
     def get_estimated_delivery_time(self, obj):
-        # Enhanced delivery time estimation based on distance
         distance = getattr(obj, 'distance_km', None)
         if distance:
-            # Base prep time + travel time (assuming 30km/h average speed)
-            base_prep_time = 25  # minutes
-            travel_time = (distance / 30) * 60  # Convert to minutes
+            base_prep_time = 25
+            travel_time = (distance / 30) * 60
             return round(base_prep_time + travel_time)
-        return 30  # Default fallback
+        return 30
     
     def get_is_open(self, obj):
         return any(branch.is_open_now() for branch in obj.branches.all() if branch.is_active)
@@ -45,7 +50,6 @@ class RestaurantSearchSerializer(serializers.ModelSerializer):
         return getattr(obj, 'has_open_branch', False)
     
     def get_location_priority(self, obj):
-        """Calculate location priority for UI highlighting"""
         distance = getattr(obj, 'distance_km', None)
         if distance is None:
             return 'unknown'

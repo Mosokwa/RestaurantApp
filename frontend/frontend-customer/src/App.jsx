@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import EmailVerification from './pages/EmailVerification';
 import Restaurants from './pages/Restaurants';
+import SearchResultsPage from './pages/SearchResultPage';
 import csrfService from './services/csrf';
 import RestaurantsExplorer from './pages/RestaurantsExplorer';
 
@@ -75,6 +76,11 @@ function App() {
                 <RestaurantsExplorer />
               </ProtectedRoute>
             }/>
+            <Route path="/search" element={
+              <ProtectedRoute>
+                <SearchResultsPage />
+              </ProtectedRoute>
+            } />
           </Route>
         </Routes>
       </Router>
