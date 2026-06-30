@@ -47,11 +47,20 @@ class MultiRestaurantLoyaltyViewSet(RetrieveModelMixin, ListModelMixin, GenericV
         Get current points balance and loyalty status
         """
         try:
-            loyalty_profile = self.get_object()
+            # Use filter().first() instead of get_object() since we want the user's profile
+            # and we don't have a pk in the URL
+            loyalty_profile = CustomerLoyalty.objects.filter(
+                customer=request.user.customer_profile
+            ).first()
+            
             if not loyalty_profile:
                 return Response({
-                    'error': 'Loyalty profile not found'
-                }, status=status.HTTP_404_NOT_FOUND)
+                    'current_points': 0,
+                    'lifetime_points': 0,
+                    'tier': 'bronze',
+                    'total_orders': 0,
+                    'total_spent': '0.00'
+                }, status=status.HTTP_200_OK)
             
             serializer = self.get_serializer(loyalty_profile)
             return Response(serializer.data)

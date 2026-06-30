@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
 from django.core.cache import cache
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -19,7 +20,9 @@ from ..serializers import (
     TrendingItemsResponseSerializer, RestaurantHomepageSerializer, EnhancedSpecialOfferSerializer,
     MenuCategoryHomeSerializer, FeaturedItemSerializer
 )
+import logging
 
+logger = logging.getLogger(__name__)
 class RestaurantHomepageRecommendationsView(APIView):
     """
     API endpoint for restaurant-specific homepage recommendations
@@ -272,373 +275,233 @@ class RestaurantTrendingItemsView(APIView):
 
 class RestaurantHomepageViewSet(viewsets.ViewSet):
     """
-    Optimized homepage endpoint for restaurant data
+    ViewSet for restaurant homepage data
+    URL: /api/routes/restaurant-homepage/{restaurant_id}/homepage/
     """
+    permission_classes = [AllowAny]
     
-    @method_decorator(cache_page(60 * 5))  # Cache for 5 minutes
     @action(detail=True, methods=['get'], url_path='homepage')
     def homepage(self, request, pk=None):
-        """
-        Get comprehensive homepage data for a restaurant in a single optimized query
-        """
+        """Get comprehensive homepage data for a restaurant"""
         try:
-            restaurant = self.get_optimized_restaurant_data(pk)
-            if not restaurant:
-                raise NotFound("Restaurant not found")
+            from ..models import Restaurant, MenuCategory, MenuItem, SpecialOffer
             
-            # Build response data with optimized queries
-            response_data = self.build_homepage_response(restaurant, request)
+            # Fetch restaurant - using status='active' instead of is_active
+            restaurant = get_object_or_404(Restaurant, restaurant_id=pk, status='active')
+            
+            # Get branch for address info (first active branch)
+            branch = restaurant.branches.filter(is_active=True).first()
+            address = branch.address if branch else None
+            
+            # Build response data
+            response_data = {
+                'restaurant': {
+                    'restaurant_id': restaurant.restaurant_id,
+                    'name': restaurant.name,
+                    'description': restaurant.description or '',
+                    'story_description': restaurant.story_description or '',
+                    'logo': restaurant.logo.url if restaurant.logo else None,
+                    'banner_image': restaurant.banner_image.url if restaurant.banner_image else None,
+                    'gallery_images': restaurant.gallery_images or [],
+                    'amenities': restaurant.amenities or [],
+                    'phone_number': restaurant.phone_number,
+                    'email': restaurant.email,
+                    'website': restaurant.website or '',
+                    'overall_rating': float(restaurant.overall_rating),
+                    'total_reviews': restaurant.total_reviews,
+                    'is_featured': restaurant.is_featured,
+                    'is_verified': restaurant.is_verified,
+                    'reservation_enabled': restaurant.reservation_enabled,
+                    'status': restaurant.status,
+                    'contact_info': {
+                        'phone': restaurant.phone_number,
+                        'email': restaurant.email,
+                        'website': restaurant.website or '',
+                        'address': str(address) if address else None
+                    },
+                    'cuisines': [
+                        {'cuisine_id': c.cuisine_id, 'name': c.name} 
+                        for c in restaurant.cuisines.all()
+                    ],
+                },
+                'special_offers': [],
+                'menu_preview': {
+                    'featured_categories': [],
+                    'popular_items': []
+                },
+                'reservation_info': {
+                    'has_reservations': restaurant.reservation_enabled,
+                    'party_size_limits': {
+                        'min': restaurant.min_party_size,
+                        'max': restaurant.max_party_size
+                    },
+                    'deposit_required': restaurant.deposit_required,
+                    'deposit_amount': float(restaurant.deposit_amount) if restaurant.deposit_required else 0,
+                    'requires_confirmation': restaurant.requires_confirmation
+                },
+                'reviews_preview': {
+                    'average_rating': float(restaurant.overall_rating),
+                    'total_reviews': restaurant.total_reviews,
+                    'rating_breakdown': {}
+                },
+                'loyalty_info': {
+                    'enabled': False
+                },
+                'operational_info': {
+                    'is_open_now': self._check_if_open(restaurant),
+                    'current_wait_time': self._calculate_wait_time(restaurant)
+                }
+            }
+            
+            # Get featured categories (using is_active field from MenuCategory)
+            try:
+                featured_categories = MenuCategory.objects.filter(
+                    restaurant=restaurant,
+                    is_active=True,
+                    is_featured=True
+                ).order_by('display_order')[:5]
+                
+                response_data['menu_preview']['featured_categories'] = [
+                    {
+                        'category_id': cat.category_id,
+                        'name': cat.name,
+                        'description': cat.description or '',
+                        'display_order': cat.display_order,
+                        'is_featured': cat.is_featured,
+                        'item_count': cat.menu_items.filter(is_available=True).count()
+                    }
+                    for cat in featured_categories
+                ]
+            except Exception as e:
+                logger.warning(f"Error fetching categories: {str(e)}")
+            
+            # Get popular items (using is_available field from MenuItem)
+            try:
+                popular_items = MenuItem.objects.filter(
+                    category__restaurant=restaurant,
+                    is_available=True
+                ).order_by('-popularity_score')[:6]
+                
+                response_data['menu_preview']['popular_items'] = [
+                    {
+                        'item_id': item.item_id,
+                        'name': item.name,
+                        'description': item.description or '',
+                        'price': float(item.price),
+                        'image': item.image.url if item.image else None,
+                        'popularity_score': item.popularity_score,
+                        'preparation_time': item.preparation_time,
+                        'is_vegetarian': item.is_vegetarian,
+                        'is_vegan': item.is_vegan,
+                        'is_gluten_free': item.is_gluten_free,
+                        'is_spicy': item.is_spicy,
+                        'is_available': item.is_available,
+                        'is_featured': item.is_featured,
+                    }
+                    for item in popular_items
+                ]
+            except Exception as e:
+                logger.warning(f"Error fetching popular items: {str(e)}")
+            
+            # Get special offers
+            try:
+                now = timezone.now()
+                offers = SpecialOffer.objects.filter(
+                    restaurant=restaurant,
+                    is_active=True,
+                    valid_from__lte=now,
+                    valid_until__gte=now
+                ).order_by('-display_priority', '-created_at')[:5]
+                
+                response_data['special_offers'] = [
+                    {
+                        'offer_id': offer.offer_id,
+                        'title': offer.title,
+                        'description': offer.description or '',
+                        'offer_type': offer.offer_type,
+                        'discount_value': float(offer.discount_value),
+                        'min_order_amount': float(offer.min_order_amount),
+                        'image': offer.image.url if offer.image else None,
+                        'is_featured': offer.is_featured,
+                    }
+                    for offer in offers
+                ]
+            except Exception as e:
+                logger.warning(f"Error fetching offers: {str(e)}")
+            
+            # Get loyalty info
+            try:
+                from ..models import RestaurantLoyaltySettings
+                loyalty_settings = RestaurantLoyaltySettings.objects.filter(
+                    restaurant=restaurant,
+                    is_loyalty_enabled=True
+                ).select_related('program').first()
+                
+                if loyalty_settings and loyalty_settings.is_loyalty_active():
+                    response_data['loyalty_info'] = {
+                        'enabled': True,
+                        'points_per_dollar': float(loyalty_settings.effective_points_rate),
+                        'signup_bonus': loyalty_settings.effective_signup_bonus,
+                        'minimum_order_amount': float(loyalty_settings.minimum_order_amount_for_points),
+                        'allow_point_redemption': loyalty_settings.allow_point_redemption,
+                        'allow_reward_redemption': loyalty_settings.allow_reward_redemption
+                    }
+            except Exception as e:
+                logger.warning(f"Error fetching loyalty settings: {str(e)}")
+            
+            # Cache the response for 5 minutes
+            cache_key = f"restaurant_homepage_{pk}"
+            cache.set(cache_key, response_data, 300)
             
             return Response(response_data)
             
-        except Exception as e:
+        except Restaurant.DoesNotExist:
             return Response(
-                {"error": "Failed to load homepage data", "detail": str(e)},
+                {'error': 'Restaurant not found', 'detail': f'No restaurant found with id {pk}'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error in restaurant homepage view: {str(e)}", exc_info=True)
+            return Response(
+                {'error': 'Failed to load homepage data', 'detail': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-    def get_optimized_restaurant_data(self, restaurant_id):
-        """
-        Single optimized query to fetch all restaurant data with related objects
-        """
-        # Main restaurant query with all necessary prefetches
-        restaurant = Restaurant.objects.filter(
-            restaurant_id=restaurant_id,
-            status='active'
-        ).select_related(
-            'owner'
-        ).prefetch_related(
-            # Branches with addresses
-            Prefetch(
-                'branches',
-                queryset=Restaurant.branches.field.related_model.objects.select_related(
-                    'address'
-                ).filter(is_active=True)
-            ),
-            # Cuisines
-            'cuisines',
-            # Menu categories with featured items
-            Prefetch(
-                'menu_categories',
-                queryset=MenuCategory.objects.filter(
-                    is_active=True
-                ).prefetch_related(
-                    Prefetch(
-                        'menu_items',
-                        queryset=MenuItem.objects.filter(
-                            is_available=True
-                        ).order_by('-popularity_score')[:8]  # Limit items per category
-                    )
-                ).order_by('display_order')
-            ),
-            # Special offers
-            Prefetch(
-                'special_offers',
-                queryset=SpecialOffer.objects.filter(
-                    is_active=True,
-                    is_featured=True
-                ).prefetch_related('applicable_items')[:10]  # Limit offers
-            ),
-            # Review settings
-            Prefetch(
-                'review_settings',
-                queryset=Restaurant.review_settings.field.related_model.objects.all()
-            ),
-            # Loyalty settings
-            Prefetch(
-                'loyalty_settings',
-                queryset=RestaurantLoyaltySettings.objects.select_related('program')
-            )
-        ).annotate(
-            # Annotate with calculated fields
-            featured_items_count=Count(
-                'menu_categories__menu_items',
-                filter=Q(menu_categories__menu_items__is_featured=True) & 
-                       Q(menu_categories__menu_items__is_available=True)
-            ),
-            active_offers_count=Count(
-                'special_offers',
-                filter=Q(special_offers__is_active=True)
-            ),
-            open_branches_count=Count(
-                'branches',
-                filter=Q(branches__is_active=True)
-            )
-        ).first()
-        
-        return restaurant
-    
-    def build_homepage_response(self, restaurant, request):
-        """
-        Build comprehensive homepage response with optimized data loading
-        """
-        # Use cache for expensive operations
-        cache_key = f"restaurant_homepage_{restaurant.restaurant_id}"
-        cached_data = cache.get(cache_key)
-        
-        if cached_data:
-            return cached_data
-        
-        response_data = {
-            "restaurant": self.get_restaurant_basic_info(restaurant),
-            "special_offers": self.get_special_offers_data(restaurant, request),
-            "menu_preview": self.get_menu_preview_data(restaurant, request),
-            "reservation_info": self.get_reservation_info(restaurant),
-            "reviews_preview": self.get_reviews_preview_data(restaurant),
-            "loyalty_info": self.get_loyalty_info(restaurant),
-            "operational_info": self.get_operational_info(restaurant)
-        }
-        
-        # Cache the complete response
-        cache.set(cache_key, response_data, 300)  # 5 minutes cache
-        
-        return response_data
-    
-    def get_restaurant_basic_info(self, restaurant):
-        """
-        Extract basic restaurant information
-        """
-        main_branch = restaurant.branches.filter(is_main_branch=True).first()
-        any_branch = restaurant.branches.first()
-        
-        return {
-            "id": restaurant.restaurant_id,
-            "name": restaurant.name,
-            "description": restaurant.description,
-            "story_description": restaurant.story_description,
-            "logo": restaurant.logo.url if restaurant.logo else None,
-            "banner_image": restaurant.banner_image.url if restaurant.banner_image else None,
-            "gallery_images": restaurant.gallery_images[:5],  # Limit gallery images
-            "amenities": restaurant.amenities,
-            "overall_rating": float(restaurant.overall_rating),
-            "total_reviews": restaurant.total_reviews,
-            "delivery_time": self.calculate_delivery_time(restaurant),
-            "reservation_enabled": restaurant.reservation_enabled,
-            "loyalty_enabled": self.has_loyalty_enabled(restaurant),
-            "operating_hours": main_branch.operating_hours if main_branch else {},
-            "contact_info": {
-                "phone": restaurant.phone_number,
-                "email": restaurant.email,
-                "website": restaurant.website,
-                "address": str(any_branch.address) if any_branch else None
-            },
-            "is_featured": restaurant.is_featured,
-            "is_verified": restaurant.is_verified
-        }
-    
-    def get_special_offers_data(self, restaurant, request):
-        """
-        Get active special offers with user-specific context
-        """
-        offers = list(restaurant.special_offers.all())
-        
-        return EnhancedSpecialOfferSerializer(
-            offers,
-            many=True,
-            context={'request': request}
-        ).data
-    
-    def get_menu_preview_data(self, restaurant, request):
-        """
-        Get optimized menu preview data
-        """
-        # Get featured categories with their items
-        featured_categories = restaurant.menu_categories.filter(
-            is_featured=True
-        )[:5]  # Limit to 5 featured categories
-        
-        categories_data = MenuCategoryHomeSerializer(
-            featured_categories,
-            many=True,
-            context={'request': request}
-        ).data
-        
-        # Get popular items across all categories (top 6)
-        popular_items = MenuItem.objects.filter(
-            category__restaurant=restaurant,
-            is_available=True
-        ).order_by('-popularity_score')[:6]
-        
-        popular_items_data = FeaturedItemSerializer(
-            popular_items,
-            many=True,
-            context={'request': request}
-        ).data
-        
-        return {
-            "featured_categories": categories_data,
-            "popular_items": popular_items_data,
-            "total_categories": restaurant.menu_categories.count(),
-            "total_items": MenuItem.objects.filter(
-                category__restaurant=restaurant,
-                is_available=True
-            ).count()
-        }
-    
-    def get_reservation_info(self, restaurant):
-        """
-        Get reservation availability information
-        """
-        if not restaurant.reservation_enabled:
-            return {"has_reservations": False}
-        
-        # Check table availability for today
-        from django.utils import timezone
-        from datetime import datetime, timedelta
-        
-        today = timezone.now().date()
-        available_tables = Table.objects.filter(
-            restaurant=restaurant,
-            is_available=True
-        ).exists()
-        
-        # Get next available time slots (simplified - in production, use proper slot finding)
-        next_slots = self.find_next_available_slots(restaurant, today)
-        
-        return {
-            "has_reservations": True,
-            "next_available_slots": next_slots,
-            "party_size_limits": {
-                "min": restaurant.min_party_size,
-                "max": restaurant.max_party_size
-            },
-            "today_availability": available_tables and len(next_slots) > 0,
-            "requires_confirmation": restaurant.requires_confirmation,
-            "deposit_required": restaurant.deposit_required,
-            "deposit_amount": float(restaurant.deposit_amount) if restaurant.deposit_required else 0
-        }
-    
-    def get_reviews_preview_data(self, restaurant):
-        """
-        Get reviews summary and featured reviews
-        """
-        # Get rating breakdown from aggregate if available
-        rating_stats = restaurant.get_rating_stats()
-        
-        # Get featured reviews (verified purchases with photos)
-        featured_reviews = RestaurantReview.objects.filter(
-            restaurant=restaurant,
-            status='approved',
-            is_verified_purchase=True
-        ).select_related(
-            'customer__user'
-        ).prefetch_related(
-            'response'
-        ).order_by('-helpful_count', '-created_at')[:3]
-        
-        featured_reviews_data = []
-        for review in featured_reviews:
-            featured_reviews_data.append({
-                "id": review.review_id,
-                "customer_name": review.customer.user.get_full_name() or review.customer.user.username,
-                "rating": float(review.overall_rating),
-                "comment": review.comment,
-                "created_at": review.created_at,
-                "photos": review.photos[:2],  # Limit photos
-                "helpful_count": review.helpful_count,
-                "owner_response": review.response.comment if hasattr(review, 'response') else None
-            })
-        
-        return {
-            "average_rating": rating_stats.get('average_rating', 0),
-            "total_reviews": rating_stats.get('total_ratings', 0),
-            "rating_breakdown": rating_stats.get('rating_distribution', {}),
-            "featured_reviews": featured_reviews_data
-        }
-    
-    def get_loyalty_info(self, restaurant):
-        """
-        Get loyalty program information
-        """
+    def _check_if_open(self, restaurant):
+        """Check if restaurant is currently open based on branches' operating hours"""
         try:
-            loyalty_settings = restaurant.loyalty_settings.get(
-                program__is_active=True
-            )
+            now = timezone.now()
+            current_day = now.strftime('%A').lower()
+            current_time = now.strftime('%H:%M')
             
-            if not loyalty_settings.is_loyalty_active():
-                return {"enabled": False}
-            
-            return {
-                "enabled": True,
-                "points_per_dollar": float(loyalty_settings.effective_points_rate),
-                "signup_bonus": loyalty_settings.effective_signup_bonus,
-                "minimum_order_amount": float(loyalty_settings.minimum_order_amount_for_points),
-                "allow_point_redemption": loyalty_settings.allow_point_redemption,
-                "allow_reward_redemption": loyalty_settings.allow_reward_redemption
-            }
-            
-        except RestaurantLoyaltySettings.DoesNotExist:
-            return {"enabled": False}
-    
-    def get_operational_info(self, restaurant):
-        """
-        Get current operational status
-        """
-        open_branches = [
-            branch for branch in restaurant.branches.all() 
-            if branch.is_active and branch.is_open_now()
-        ]
-        
-        return {
-            "is_open_now": len(open_branches) > 0,
-            "open_branches_count": len(open_branches),
-            "delivery_available": any(
-                branch.operating_hours for branch in open_branches
-            ),
-            "pickup_available": True,  # Assuming always available if open
-            "current_wait_time": self.calculate_current_wait_time(restaurant)
-        }
-    
-    # Helper methods
-    def calculate_delivery_time(self, restaurant):
-        """
-        Calculate estimated delivery time based on restaurant data
-        """
-        # Simple calculation - in production, use more sophisticated logic
-        base_time = 30  # minutes
-        popularity_factor = min(restaurant.total_reviews / 100, 20)  # Add up to 20 min for popular restaurants
-        return base_time + popularity_factor
-    
-    def has_loyalty_enabled(self, restaurant):
-        """
-        Check if loyalty is enabled for this restaurant
-        """
-        try:
-            return restaurant.loyalty_settings.get(
-                program__is_active=True
-            ).is_loyalty_active()
-        except RestaurantLoyaltySettings.DoesNotExist:
+            for branch in restaurant.branches.filter(is_active=True):
+                hours = branch.operating_hours or {}
+                day_hours = hours.get(current_day, {})
+                open_time = day_hours.get('open', '')
+                close_time = day_hours.get('close', '')
+                
+                if open_time and close_time and open_time <= current_time <= close_time:
+                    return True
             return False
+        except Exception:
+            return True  # Default to open if can't determine
     
-    def find_next_available_slots(self, restaurant, date):
-        """
-        Find next available reservation slots (simplified implementation)
-        """
-        # This is a simplified version - in production, implement proper slot finding
-        from datetime import datetime, timedelta
-        
-        slots = []
-        current_time = datetime.now()
-        
-        # Generate sample slots for the next 2 hours
-        for i in range(1, 5):
-            slot_time = current_time + timedelta(hours=i)
-            # Round to nearest 15 minutes
-            minutes = (slot_time.minute // 15) * 15
-            slot_time = slot_time.replace(minute=minutes, second=0, microsecond=0)
+    def _calculate_wait_time(self, restaurant):
+        """Calculate estimated wait time based on restaurant activity"""
+        try:
+            from ..models import Order
+            # Count recent active orders
+            active_orders = Order.objects.filter(
+                restaurant=restaurant,
+                status__in=['confirmed', 'preparing']
+            ).count()
             
-            slots.append(slot_time.isoformat())
-            
-            if len(slots) >= 3:  # Return max 3 slots
-                break
-        
-        return slots
-    
-    def calculate_current_wait_time(self, restaurant):
-        """
-        Calculate current wait time based on restaurant activity
-        """
-        # Simple calculation - in production, use order queue data
-        base_prep_time = 15
-        busy_factor = min(restaurant.total_reviews / 50, 15)  # Add up to 15 min for busy restaurants
-        return base_prep_time + busy_factor
+            if active_orders > 10:
+                return 45
+            elif active_orders > 5:
+                return 30
+            elif active_orders > 0:
+                return 15
+            return None
+        except Exception:
+            return None

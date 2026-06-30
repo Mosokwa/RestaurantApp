@@ -1,3 +1,4 @@
+// components/homepage/FastDeliverySection.jsx
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 // import './Homepage.css';
@@ -33,11 +34,22 @@ const FastDeliverySection = ({ location }) => {
     }
   };
 
+  // Helper function to safely format rating
   const formatRating = (rating) => {
-    if (rating === null || rating === undefined || isNaN(rating)) {
+    if (rating === null || rating === undefined || rating === '') {
       return '4.5';
     }
-    return typeof rating === 'number' ? rating.toFixed(1) : rating;
+    const numRating = typeof rating === 'string' ? parseFloat(rating) : rating;
+    if (isNaN(numRating)) return '4.5';
+    return numRating.toFixed(1);
+  };
+
+  // Helper to safely format distance
+  const formatDistance = (distance) => {
+    if (distance === null || distance === undefined) return null;
+    const numDistance = typeof distance === 'string' ? parseFloat(distance) : distance;
+    if (isNaN(numDistance)) return null;
+    return numDistance.toFixed(1);
   };
 
   if (loading && restaurants.length === 0) {
@@ -53,7 +65,17 @@ const FastDeliverySection = ({ location }) => {
     );
   }
 
-  if (restaurants.length === 0) {
+  // Remove duplicates by restaurant_id
+  const seenIds = new Set();
+  const uniqueRestaurants = (restaurants || []).filter(restaurant => {
+    if (seenIds.has(restaurant.restaurant_id)) {
+      return false;
+    }
+    seenIds.add(restaurant.restaurant_id);
+    return true;
+  });
+
+  if (uniqueRestaurants.length === 0) {
     return null;
   }
 
@@ -67,7 +89,7 @@ const FastDeliverySection = ({ location }) => {
       </div>
       
       <div className="carousel-container">
-        {restaurants.map((restaurant) => (
+        {uniqueRestaurants.map((restaurant) => (
           <Link 
             key={restaurant.restaurant_id} 
             to={`/restaurant/${restaurant.restaurant_id}`}
@@ -101,7 +123,7 @@ const FastDeliverySection = ({ location }) => {
               <div className="restaurant-footer">
                 <p className="delivery-info">{restaurant.delivery_info?.estimated_time || '25-35 min'} • $1.99 delivery</p>
                 {restaurant.distance_km && (
-                  <p className="distance">{restaurant.distance_km.toFixed(1)} km away</p>
+                  <p className="distance">{formatDistance(restaurant.distance_km)} km away</p>
                 )}
               </div>
             </div>

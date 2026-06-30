@@ -13,6 +13,9 @@ import Restaurants from './pages/Restaurants';
 import SearchResultsPage from './pages/SearchResultPage';
 import csrfService from './services/csrf';
 import RestaurantsExplorer from './pages/RestaurantsExplorer';
+import RestaurantHomepage from './pages/restaurant/RestaurantHompage';
+import OrderTracking from './pages/restaurant/OrderTracking';
+import NotificationsPanel from './components/restaurant/NotificationsPanel';
 
 function App() {
   useEffect(() =>{
@@ -79,6 +82,16 @@ function App() {
             <Route path="/search" element={
               <ProtectedRoute>
                 <SearchResultsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/restaurant/:restaurantId" element={
+              <ProtectedRoute>
+                <RestaurantHomepage />
+              </ProtectedRoute>
+            } />
+            <Route path="/restaurant/:restaurantId/table" element={
+              <ProtectedRoute>
+                <RestaurantHomepage />
               </ProtectedRoute>
             } />
           </Route>

@@ -32,7 +32,7 @@ router.register(r'reservations', ReservationViewSet, basename='reservations')
 router.register(r'timeslots', TimeSlotViewSet, basename='timeslots')
 
 # Dedicated restaurant homepage viewset
-router.register(r'restaurants', RestaurantHomepageViewSet, basename='restaurant')
+router.register(r'restaurant-homepage', RestaurantHomepageViewSet, basename='restaurant-homepage')
 
 # POS Integration Routes
 router.register(r'pos/connections', POSConnectionViewSet, basename='posconnection')

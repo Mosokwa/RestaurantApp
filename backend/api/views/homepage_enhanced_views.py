@@ -855,7 +855,7 @@ class RestaurantsYouMightLikeView(APIView):
         user_orders = Order.objects.filter(
             customer__user=user,
             status='delivered'
-        ).prefetch_related('items__menu_item')
+        ).prefetch_related('order_items__menu_item')
         
         # If user has no order history, return empty or popular ones
         if not user_orders.exists():
@@ -1012,9 +1012,10 @@ class RestaurantsYouMightLikeView(APIView):
         total_order_value = 0
         order_count = orders.count()
         
+        # Iterate through orders
         for order in orders:
-            # Track cuisines
-            for order_item in order.items.all():
+            # Access order items using the correct related name 'order_items'
+            for order_item in order.order_items.all():  # Changed from 'items' to 'order_items'
                 menu_item = order_item.menu_item
                 if menu_item:
                     restaurant = menu_item.category.restaurant
@@ -1040,7 +1041,7 @@ class RestaurantsYouMightLikeView(APIView):
             if behavior.behavior_type == 'favorite' and behavior.restaurant:
                 restaurant = behavior.restaurant
                 for cuisine in restaurant.cuisines.all():
-                    preferences['cuisines'][cuisine.name] = preferences['cuisines'].get(cuisine.name, 0) + 5  # Higher weight for favorites
+                    preferences['cuisines'][cuisine.name] = preferences['cuisines'].get(cuisine.name, 0) + 5
         
         # Normalize and summarize
         total_cuisine_orders = sum(preferences['cuisines'].values())
@@ -1083,7 +1084,7 @@ class RestaurantsYouMightLikeView(APIView):
         # Score restaurants based on match
         scored_restaurants = []
         for restaurant in restaurants:
-            score = 0
+            score = 0.0  # Initialize as float
             
             # Cuisine match
             restaurant_cuisines = [c.name for c in restaurant.cuisines.all()]
@@ -1099,12 +1100,12 @@ class RestaurantsYouMightLikeView(APIView):
             
             if preferences['price_range']['avg'] > 0:
                 price_diff = abs(float(avg_menu_price) - preferences['price_range']['avg'])
-                if price_diff < 10:  # Within $10 range
+                if price_diff < 10:
                     score += 50 - (price_diff * 5)
             
-            # Rating boost
+            # Rating boost - FIXED: Convert Decimal to float
             if restaurant.overall_rating:
-                score += restaurant.overall_rating * 20
+                score += float(restaurant.overall_rating) * 20
             
             scored_restaurants.append({
                 'restaurant': restaurant,
@@ -1113,7 +1114,7 @@ class RestaurantsYouMightLikeView(APIView):
         
         # Sort by score and take top
         scored_restaurants.sort(key=lambda x: x['score'], reverse=True)
-        top_scored = scored_restaurants[:limit * 2]  # Get more for location filtering
+        top_scored = scored_restaurants[:limit * 2]
         
         return [item['restaurant'] for item in top_scored]
     
@@ -1150,8 +1151,8 @@ class RestaurantsYouMightLikeView(APIView):
     
     def _calculate_match_score(self, restaurant, preferences):
         """Calculate match score percentage"""
-        score = 0
-        max_score = 0
+        score = 0.0  # Start as float
+        max_score = 0.0
         
         # Cuisine match (up to 60 points)
         restaurant_cuisines = [c.name.lower() for c in restaurant.cuisines.all()]
@@ -1172,10 +1173,10 @@ class RestaurantsYouMightLikeView(APIView):
             if price_diff < 20:
                 score += 20 - price_diff
         
-        # Rating (up to 20 points)
+        # Rating (up to 20 points) - FIXED: Convert Decimal to float
         max_score += 20
         if restaurant.overall_rating:
-            score += restaurant.overall_rating * 4
+            score += float(restaurant.overall_rating) * 4
         
         if max_score > 0:
             return min(100, int((score / max_score) * 100))

@@ -588,7 +588,6 @@ class Cart(models.Model):
         on_delete=models.CASCADE,
         related_name='cart'
     )
-    
     restaurant = models.ForeignKey(
         'api.Restaurant',
         on_delete=models.CASCADE,
@@ -596,13 +595,11 @@ class Cart(models.Model):
         blank=True,
         related_name='carts'
     )
-
     applied_offers = models.ManyToManyField(
         'api.SpecialOffer',
         related_name='carts',
         blank=True
     )
-    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -629,24 +626,36 @@ class Cart(models.Model):
         """Dynamically determine restaurant from items"""
         if self.restaurant:
             return self.restaurant
-        if self.cart_items.exists():
+        if self.pk and self.cart_items.exists():
             first_item = self.cart_items.first()
             return first_item.menu_item.category.restaurant
         return None
 
     def clean(self):
         """Validate that all items belong to the same restaurant"""
-        if self.cart_items.exists():
+        # Skip validation if cart hasn't been saved yet
+        if not self.pk:
+            return
+        
+        if self.pk and self.cart_items.exists():
             restaurants = set()
             for item in self.cart_items.all():
                 restaurants.add(item.menu_item.category.restaurant)
             
             if len(restaurants) > 1:
+                from django.core.exceptions import ValidationError
                 raise ValidationError("All cart items must belong to the same restaurant")
             
             if self.restaurant and self.restaurant not in restaurants:
+                from django.core.exceptions import ValidationError
                 raise ValidationError("Cart restaurant must match item restaurants")
-            
+
+    def save(self, *args, **kwargs):
+        # Only validate if the cart already exists (has a primary key)
+        if self.pk:
+            self.clean()
+        super().save(*args, **kwargs)
+
     @property
     def discount_amount(self):
         """Calculate total discount from applied offers"""
@@ -663,6 +672,7 @@ class Cart(models.Model):
     @property
     def total_with_discount(self):
         """Calculate total with discounts applied"""
+        from decimal import Decimal
         return max(Decimal('0'), self.subtotal - self.discount_amount)
     
     def calculate_offer_discount(self, offer):
@@ -680,8 +690,9 @@ class Cart(models.Model):
     
     def apply_offer(self, offer, customer):
         """Apply special offer to cart with day validation"""
+        from django.core.exceptions import ValidationError
+        
         if not offer.is_valid():
-            # Provide specific reason why offer is invalid
             if not offer.is_active:
                 raise ValidationError("Offer is no longer active")
             elif not offer.is_valid_for_day():
@@ -697,7 +708,6 @@ class Cart(models.Model):
         if self.subtotal < offer.min_order_amount:
             raise ValidationError(f"Cart subtotal must be at least {offer.min_order_amount}")
         
-        # Check applicable items if offer is item-specific
         if offer.applicable_items.exists():
             cart_item_ids = set(self.cart_items.values_list('menu_item_id', flat=True))
             applicable_item_ids = set(offer.applicable_items.values_list('item_id', flat=True))
@@ -714,10 +724,6 @@ class Cart(models.Model):
         self.applied_offers.remove(offer)
         self.save()
         return True
-    
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
 
 class CartItem(models.Model):
     cart_item_id = models.AutoField(primary_key=True)

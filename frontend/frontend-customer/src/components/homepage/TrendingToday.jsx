@@ -1,3 +1,4 @@
+// components/homepage/TrendingToday.jsx
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import './ThreeDCarousel.css';
@@ -26,7 +27,18 @@ const TrendingToday = ({ location }) => {
       if (!response.ok) throw new Error('Failed to fetch trending dishes');
       
       const data = await response.json();
-      setDishes(data || []);
+      
+      // Remove duplicates by item_id
+      const seenIds = new Set();
+      const uniqueDishes = (data || []).filter(dish => {
+        if (seenIds.has(dish.item_id)) {
+          return false;
+        }
+        seenIds.add(dish.item_id);
+        return true;
+      });
+      
+      setDishes(uniqueDishes);
     } catch (error) {
       console.error('Error fetching trending today:', error);
       setDishes([]);
@@ -75,9 +87,16 @@ const TrendingToday = ({ location }) => {
     return null;
   }
 
+  // Helper to safely format price
+  const formatPrice = (price) => {
+    if (price === null || price === undefined) return '0.00';
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(numPrice)) return '0.00';
+    return numPrice.toFixed(2);
+  };
+
   return (
     <section className="carousel-section">
-      {/* ROW 1: Header */}
       <div className="carousel-header">
         <h2 className="carousel-title">Trending Today</h2>
         <span className="carousel-subtitle">
@@ -85,13 +104,11 @@ const TrendingToday = ({ location }) => {
         </span>
       </div>
       
-      {/* ROW 2: Cards */}
       <div className="carousel-wrapper">
         <div className="carousel-track" ref={carouselRef}>
           {dishes.map((dish) => (
             <div key={dish.item_id} className="carousel-card">
               <div className="flip-card">
-                {/* Front - Dish Info */}
                 <div className="card-front">
                   <div className="card-image">
                     <img 
@@ -113,7 +130,7 @@ const TrendingToday = ({ location }) => {
                     <h3>{dish.name}</h3>
                     <p className="card-description">{dish.description}</p>
                     <p className="card-price">
-                      ${typeof dish.price === 'number' ? dish.price.toFixed(2) : dish.price}
+                      ${formatPrice(dish.price)}
                     </p>
                     <p className="card-restaurant">
                       {dish.restaurant?.name}
@@ -121,7 +138,6 @@ const TrendingToday = ({ location }) => {
                   </div>
                 </div>
                 
-                {/* Back - Why It's Trending */}
                 <div className="card-back">
                   <div className="back-content">
                     <h4>Why It's Trending</h4>
@@ -157,7 +173,6 @@ const TrendingToday = ({ location }) => {
         </div>
       </div>
       
-      {/* ROW 3: Controls */}
       <div className="carousel-controls">
         <button 
           className="carousel-btn prev-btn" 

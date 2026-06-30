@@ -1,3 +1,4 @@
+// components/homepage/RecentlyViewed.jsx
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 // import './Homepage.css';
@@ -27,20 +28,38 @@ const RecentlyViewed = ({ location }) => {
       });
       
       if (response.status === 401) {
-        // User not authenticated
         setRestaurants([]);
         return;
       }
       
       if (!response.ok) throw new Error('Failed to fetch recently viewed');
       const data = await response.json();
-      setRestaurants(data);
+      setRestaurants(data || []);
     } catch (error) {
       console.error('Error fetching recently viewed:', error);
       setRestaurants([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to safely format rating
+  const formatRating = (rating) => {
+    if (rating === null || rating === undefined || rating === '') {
+      return '4.5';
+    }
+    // Convert to number if it's a string
+    const numRating = typeof rating === 'string' ? parseFloat(rating) : rating;
+    if (isNaN(numRating)) return '4.5';
+    return numRating.toFixed(1);
+  };
+
+  // Helper to safely format distance
+  const formatDistance = (distance) => {
+    if (distance === null || distance === undefined) return null;
+    const numDistance = typeof distance === 'string' ? parseFloat(distance) : distance;
+    if (isNaN(numDistance)) return null;
+    return numDistance.toFixed(1);
   };
 
   if (loading) {
@@ -56,7 +75,17 @@ const RecentlyViewed = ({ location }) => {
     );
   }
 
-  if (restaurants.length === 0) {
+  // Remove duplicates by restaurant_id
+  const seenIds = new Set();
+  const uniqueRestaurants = (restaurants || []).filter(restaurant => {
+    if (seenIds.has(restaurant.restaurant_id)) {
+      return false;
+    }
+    seenIds.add(restaurant.restaurant_id);
+    return true;
+  });
+
+  if (uniqueRestaurants.length === 0) {
     return null;
   }
 
@@ -70,7 +99,7 @@ const RecentlyViewed = ({ location }) => {
       </div>
       
       <div className="carousel-container">
-        {restaurants.map((restaurant) => (
+        {uniqueRestaurants.map((restaurant) => (
           <Link 
             key={restaurant.restaurant_id} 
             to={`/restaurant/${restaurant.restaurant_id}`}
@@ -91,7 +120,7 @@ const RecentlyViewed = ({ location }) => {
                   </span>
                 )}
                 <div className="restaurant-rating">
-                  ⭐ {restaurant.overall_rating ? restaurant.overall_rating.toFixed(1) : '4.5'}
+                  ⭐ {formatRating(restaurant.overall_rating)}
                 </div>
               </div>
             </div>
@@ -103,7 +132,7 @@ const RecentlyViewed = ({ location }) => {
               <div className="restaurant-footer">
                 <p className="delivery-info">25-35 min • $1.99 delivery</p>
                 {restaurant.distance_km && (
-                  <p className="distance">{restaurant.distance_km.toFixed(1)} km away</p>
+                  <p className="distance">{formatDistance(restaurant.distance_km)} km away</p>
                 )}
               </div>
             </div>
